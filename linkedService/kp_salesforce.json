@@ -1,0 +1,32 @@
+{
+	"name": "kp_salesforce",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"parameters": {
+			"sf_env": {
+				"type": "string",
+				"defaultValue": "train"
+			}
+		},
+		"annotations": [],
+		"type": "SalesforceV2",
+		"typeProperties": {
+			"environmentUrl": "https://kpnationalconsumersales--training.sandbox.my.salesforce.com",
+			"clientId": "3MVG9dzDZFnwTBRIWNcW_2nysdTp4coHGhpOc.XeM_CKsql5LlnHbMQbXuPGV1SmFgICq7NgcJQy99tLO9xEQ",
+			"clientSecret": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "kp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "salesforce-client-secret-train"
+			},
+			"apiVersion": "60.0",
+			"authenticationType": "OAuth2ClientCredential"
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

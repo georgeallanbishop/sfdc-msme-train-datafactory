@@ -1,0 +1,38 @@
+{
+	"name": "import weekly",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-12-07T02:51:00",
+				"endTime": "2022-12-30T00:20:09",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						13,
+						9,
+						10,
+						11,
+						12,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21
+					]
+				}
+			}
+		}
+	}
+}

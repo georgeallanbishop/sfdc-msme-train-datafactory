@@ -1,0 +1,430 @@
+{
+	"name": "delete_sftp_file",
+	"properties": {
+		"activities": [
+			{
+				"name": "CleanInbound",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.uploaded_files",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "IfIdleFile",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@contains(pipeline().parameters.idle_files, item())",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "DeleteKPMA",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": "@pipeline().parameters.env",
+													"folder": "kpma"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteKPIF",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": {
+														"value": "@pipeline().parameters.env",
+														"type": "Expression"
+													},
+													"folder": "kpif"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteCampaignFiles",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": {
+														"value": "@pipeline().parameters.env",
+														"type": "Expression"
+													},
+													"folder": "campaignfiles"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteALMS",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": {
+														"value": "@pipeline().parameters.env",
+														"type": "Expression"
+													},
+													"folder": "alms"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteMedicaid",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": {
+														"value": "@pipeline().parameters.env",
+														"type": "Expression"
+													},
+													"folder": "medicaid"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteEpsilon",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": {
+														"value": "@pipeline().parameters.env",
+														"type": "Expression"
+													},
+													"folder": "epsilon"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteCDE",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": {
+														"value": "@pipeline().parameters.env",
+														"type": "Expression"
+													},
+													"folder": "cde"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteKPWA",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": "@pipeline().parameters.env",
+													"folder": "kpwa"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "DeleteVeritas",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "sftp_inbound_delete",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": "@pipeline().parameters.env",
+													"folder": "veritas"
+												}
+											},
+											"logStorageSettings": {
+												"linkedServiceName": {
+													"referenceName": "sfdcdataxchange",
+													"type": "LinkedServiceReference"
+												},
+												"path": "auditlogs/delete_log"
+											},
+											"enableLogging": true,
+											"storeSettings": {
+												"type": "SftpReadSettings",
+												"recursive": true,
+												"wildcardFileName": {
+													"value": "@{replace(replace(item(), '.docx', '.*'), '.csv', '.*')}",
+													"type": "Expression"
+												},
+												"enablePartitionDiscovery": false
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"uploaded_files": {
+				"type": "array"
+			},
+			"idle_files": {
+				"type": "array"
+			},
+			"env": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,108 @@
+{
+	"name": "ib_kpma_onlineRSVP",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "onlineRSVP"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "intermOUTPUT"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "rejectOUTPUT"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertLead"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertMtgAttendee"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectREASON"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "toMtgAttendContact"
+				},
+				{
+					"name": "toLead"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "FilterContact1"
+				},
+				{
+					"name": "FilterLead1"
+				},
+				{
+					"name": "FilterContact2"
+				},
+				{
+					"name": "FilterLead2"
+				},
+				{
+					"name": "toMtgAttendLead"
+				},
+				{
+					"name": "Union1"
+				},
+				{
+					"name": "toContact"
+				},
+				{
+					"name": "addADFId"
+				},
+				{
+					"name": "ConditionalSplit2"
+				},
+				{
+					"name": "DerivedColumn1"
+				}
+			],
+			"script": "source(output(\n\t\tFIRST_NAME as string,\n\t\tLAST_NAME as string,\n\t\tEMAIL_ADDRESS as string,\n\t\tPHONE as string,\n\t\tCURRENT_MEMBER_YN as string,\n\t\tMEETINGID as string,\n\t\tRSVP_DATE as string,\n\t\tREQUEST_ID as string,\n\t\tPROMO_ID as string,\n\t\tPTC as string,\n\t\tPTC_SCOPE as string,\n\t\tPTC_SOURCE as string,\n\t\tPTC_DATE as string,\n\t\tPTC_EXPIRATION as string,\n\t\tPTE as string,\n\t\tPTE_SCOPE as string,\n\t\tPTE_SOURCE as string,\n\t\tPTE_DATE as string,\n\t\tPTE_EXPIRATION as string,\n\t\tCONTACT_ID as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_onlineRSVP*']) ~> onlineRSVP\naddADFId split(isNull(CURRENT_MEMBER_YN)||isNull(MEETINGID)||isNull(RSVP_DATE)||isNull(REQUEST_ID)||isNull(PROMO_ID)||((isNull(CONTACT_ID) == false()) && not(in(['003', '00Q'], upper(substring(CONTACT_ID, 1, 3)))))||(length(PHONE)!=10)||((isNull(RSVP_DATE) == false())&&(isNull(toTimestamp(RSVP_DATE, 'yyyyMMdd HH:mm:ss'))))||((isNull(PTC_DATE) == false())&&(isNull(toTimestamp(PTC_DATE, 'yyyyMMdd'))))||((isNull(PTC_EXPIRATION) == false())&&(isNull(toTimestamp(PTC_EXPIRATION, 'yyyyMMdd'))))||((isNull(PTE_DATE) == false())&&(isNull(toTimestamp(PTE_DATE, 'yyyyMMdd'))))||((isNull(PTE_DATE) == false())&&(isNull(toTimestamp(PTE_EXPIRATION, 'yyyyMMdd')))),\n\tdisjoint: false) ~> ConditionalSplit1@(rejectCONDITION, toSFDC)\nConditionalSplit1@rejectCONDITION derive(REJECT_REASON = concat(iif(isNull(CURRENT_MEMBER_YN)||isNull(MEETINGID)||isNull(RSVP_DATE)||isNull(REQUEST_ID)||isNull(PROMO_ID), concat('ADF:REQUIRED FIELD MISSING: ', iif(isNull(CURRENT_MEMBER_YN), 'Are you a KP member ', ''), iif(isNull(MEETINGID), 'Meeting ID ', ''), iif(isNull(RSVP_DATE), 'RSVP Date ', ''), iif(isNull(REQUEST_ID), 'Request ID ', ''), iif(isNull(PROMO_ID), 'Promo ID ', '')), ''),\r\n       iif(((isNull(CONTACT_ID) == false()) && not(in(['003', '00Q'], upper(substring(CONTACT_ID, 1, 3))))), concat('ADF:INVALID Contact ID: Contact ID should begin with 003 or 00Q. Received Contact ID: ', CONTACT_ID), ''),\r\n       iif(length(PHONE) != 10, 'ADF:Invalid Phone Number Length',''),\r\n       iif((isNull(RSVP_DATE) == false())&&(isNull(toTimestamp(RSVP_DATE, 'yyyyMMdd HH:mm:ss'))), 'ADF:Invalid RSVP Date Format, ', ''),\r\n       iif((isNull(PTC_DATE) == false())&&(isNull(toTimestamp(PTC_DATE, 'yyyyMMdd'))), 'ADF:Invalid PTC Date Format, ', ''),\r\n       iif((isNull(PTC_EXPIRATION) == false())&&(isNull(toTimestamp(PTC_EXPIRATION, 'yyyyMMdd'))), 'ADF:Invalid PTC Expiration Date Format, ', ''),\r\n       iif((isNull(PTE_DATE) == false())&&(isNull(toTimestamp(PTE_DATE, 'yyyyMMdd'))), 'ADF:Invalid PTE Date Format, ', ''),\r\n       iif((isNull(PTC_DATE) == false())&&(isNull(toTimestamp(PTC_EXPIRATION, 'yyyyMMdd'))), 'ADF:Invalid PTE_Expiration Date Format, ', ''), \r\n       '')) ~> rejectREASON\nrejectREASON select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit2@hasContactId select(mapColumn(\n\t\tADFId__c,\n\t\tEmail__c = EMAIL_ADDRESS,\n\t\tKPMember__c = CURRENT_MEMBER_YN,\n\t\tMedicare_Permission_to_Call__c = PTC,\n\t\tMedicare_Permission_to_Call_Source__c = PTC_SOURCE,\n\t\tMedicare_Permission_to_Email__c = PTE,\n\t\tMedicare_Permission_to_Email_Source__c = PTE_SOURCE,\n\t\tMeeting__c = MEETINGID,\n\t\tPhone_Number__c = PHONE,\n\t\tPromo_ID__c = PROMO_ID,\n\t\tPTC_Expiration__c = PTC_EXPIRATION,\n\t\tPTC_Scope__c = PTC_SCOPE,\n\t\tPTC_Source__c = PTC_SOURCE,\n\t\tPTC_Modified_Date__c = PTC_DATE,\n\t\tPTE__c = PTE,\n\t\tPTE_Expiration__c = PTE_EXPIRATION,\n\t\tPTE_Scope__c = PTE_SCOPE,\n\t\tPTE_Source__c = PTE_SOURCE,\n\t\tPTE_Modified_Date__c = PTE_DATE,\n\t\tName = FIRST_NAME,\n\t\tRegistrant_last_Name__c = LAST_NAME,\n\t\tRSVP_Date__c = RSVP_DATE,\n\t\tRequest_Id__c = REQUEST_ID,\n\t\tContact__c = CONTACT_ID\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: true) ~> toMtgAttendContact\nConditionalSplit2@hasContactId select(mapColumn(\n\t\tADFId__c,\n\t\tFirstName = FIRST_NAME,\n\t\tLastName = LAST_NAME,\n\t\tEmail = EMAIL_ADDRESS,\n\t\tHome_Phone__c = PHONE,\n\t\tKPMember__c = CURRENT_MEMBER_YN,\n\t\tPromo_Id__c = PHONE,\n\t\tPTC__c = PTC,\n\t\tPTC_Scope__c = PTC_SCOPE,\n\t\tPTC_Source__c = PTC_SOURCE,\n\t\tPTC_Modified_Date__c = PTC_DATE,\n\t\tPTC_Expiration__c = PTC_EXPIRATION,\n\t\tPTE__c = PTE,\n\t\tPTE_Scope__c = PTE_SCOPE,\n\t\tPTE_Source__c = PTE_SOURCE,\n\t\tPTE_Modified_Date__c = PTE_DATE,\n\t\tPTE_Expiration__c = PTE_EXPIRATION,\n\t\tId = CONTACT_ID\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> toLead\nConditionalSplit2@noContactId select(mapColumn(\n\t\tADFId__c,\n\t\tEmail__c = EMAIL_ADDRESS,\n\t\tKPMember__c = CURRENT_MEMBER_YN,\n\t\tMedicare_Permission_to_Call__c = PTC,\n\t\tMedicare_Permission_to_Call_Source__c = PTC_SOURCE,\n\t\tMedicare_Permission_to_Email__c = PTE,\n\t\tMedicare_Permission_to_Email_Source__c = PTE_SOURCE,\n\t\tMeeting__c = MEETINGID,\n\t\tPhone_Number__c = PHONE,\n\t\tPromo_ID__c = PROMO_ID,\n\t\tPTC_Expiration__c = PTC_EXPIRATION,\n\t\tPTC_Scope__c = PTC_SCOPE,\n\t\tPTC_Source__c = PTC_SOURCE,\n\t\tPTC_Modified_Date__c = PTC_DATE,\n\t\tPTE__c = PTE,\n\t\tPTE_Expiration__c = PTE_EXPIRATION,\n\t\tPTE_Scope__c = PTE_SCOPE,\n\t\tPTE_Source__c = PTE_SOURCE,\n\t\tPTE_Modified_Date__c = PTE_DATE,\n\t\tName = FIRST_NAME,\n\t\tRegistrant_last_Name__c = LAST_NAME,\n\t\tRSVP_Date__c = RSVP_DATE,\n\t\tRequest_Id__c = REQUEST_ID\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: true) ~> Select2\ntoContact filter(startsWith(Id, '003')) ~> FilterContact1\ntoLead filter(startsWith(Id, '00Q')) ~> FilterLead1\ntoMtgAttendContact filter(startsWith(Contact__c, '003')) ~> FilterContact2\ntoMtgAttendLead filter(startsWith(Lead__c, '00Q')) ~> FilterLead2\nConditionalSplit2@hasContactId select(mapColumn(\n\t\tADFId__c,\n\t\tEmail__c = EMAIL_ADDRESS,\n\t\tKPMember__c = CURRENT_MEMBER_YN,\n\t\tMedicare_Permission_to_Call__c = PTC,\n\t\tMedicare_Permission_to_Call_Source__c = PTC_SOURCE,\n\t\tMedicare_Permission_to_Email__c = PTE,\n\t\tMedicare_Permission_to_Email_Source__c = PTE_SOURCE,\n\t\tMeeting__c = MEETINGID,\n\t\tPhone_Number__c = PHONE,\n\t\tPromo_ID__c = PROMO_ID,\n\t\tPTC_Expiration__c = PTC_EXPIRATION,\n\t\tPTC_Scope__c = PTC_SCOPE,\n\t\tPTC_Source__c = PTC_SOURCE,\n\t\tPTC_Modified_Date__c = PTC_DATE,\n\t\tPTE__c = PTE,\n\t\tPTE_Expiration__c = PTE_EXPIRATION,\n\t\tPTE_Scope__c = PTE_SCOPE,\n\t\tPTE_Source__c = PTE_SOURCE,\n\t\tPTE_Modified_Date__c = PTE_DATE,\n\t\tName = FIRST_NAME,\n\t\tRegistrant_last_Name__c = LAST_NAME,\n\t\tRSVP_Date__c = RSVP_DATE,\n\t\tRequest_Id__c = REQUEST_ID,\n\t\tLead__c = CONTACT_ID\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: true) ~> toMtgAttendLead\nSelect2, FilterContact2, FilterLead2 union(byName: true)~> Union1\nConditionalSplit2@hasContactId select(mapColumn(\n\t\tADFId__c,\n\t\tFirstName = FIRST_NAME,\n\t\tLastName = LAST_NAME,\n\t\tEmail = EMAIL_ADDRESS,\n\t\tHomePhone = PHONE,\n\t\tKPMember__c = CURRENT_MEMBER_YN,\n\t\tPromo_Id__c = PROMO_ID,\n\t\tPTC__c = PTC,\n\t\tPTC_Scope__c = PTC_SCOPE,\n\t\tPTC_Source__c = PTC_SOURCE,\n\t\tPTC_Modified_Date__c = PTC_DATE,\n\t\tPTC_Expiration__c = PTC_EXPIRATION,\n\t\tPTE__c = PTE,\n\t\tPTE_Scope__c = PTE_SCOPE,\n\t\tPTE_Source__c = PTE_SOURCE,\n\t\tPTE_Modified_Date__c = PTE_DATE,\n\t\tPTE_Expiration__c = PTE_EXPIRATION,\n\t\tId = CONTACT_ID\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> toContact\nonlineRSVP derive(ADFId__c = uuid()) ~> addADFId\nDerivedColumn1 split(isNull(CONTACT_ID),\n\tdisjoint: false) ~> ConditionalSplit2@(noContactId, hasContactId)\nConditionalSplit1@toSFDC derive(CURRENT_MEMBER_YN = iif(upper(CURRENT_MEMBER_YN) == 'Y', 'Yes', concat(iif(upper(CURRENT_MEMBER_YN) == 'N', 'No', CURRENT_MEMBER_YN))),\n\t\tRSVP_DATE = coalesce(toString(toTimestamp(RSVP_DATE, 'yyyyMMdd HH:mm:ss')),RSVP_DATE),\n\t\tPTC_DATE = coalesce(toString(toTimestamp(PTC_DATE, 'yyyyMMdd')),PTC_DATE),\n\t\tPTC_EXPIRATION = coalesce(toString(toTimestamp(PTC_EXPIRATION, 'yyyyMMdd')),PTC_EXPIRATION),\n\t\tPTE_DATE = coalesce(toString(toTimestamp(PTE_DATE, 'yyyyMMdd')),PTE_DATE),\n\t\tPTE_EXPIRATION = coalesce(toString(toTimestamp(PTE_EXPIRATION, 'yyyyMMdd')),PTE_DATE)) ~> DerivedColumn1\naddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_onlineRSVP_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> intermOUTPUT\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_onlineRSVP_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> rejectOUTPUT\nFilterContact1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_onlineRSVP_Contact.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> upsertContact\nFilterLead1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_onlineRSVP_Lead.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> upsertLead\nUnion1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_onlineRSVP_Staging_Meeting_Attendee__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertMtgAttendee"
+		}
+	}
+}

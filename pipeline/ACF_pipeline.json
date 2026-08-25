@@ -1,0 +1,577 @@
+{
+	"name": "ACF_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "getContentId",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "SetRunDatetime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SetRunDateSuffix",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "LookupLastUpdate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": {
+							"value": "@concat('SELECT Id, LastModifiedDate, ACF_Process_Complete__c, ContentVersionId__c, Last_Name__c, Health_Medical_Record_Number_if_any__c, Date_of_Birth__c, First_Name__c, Phone__c, Other_Market__c FROM Account_Change_Form__c WHERE ContentVersionId__c != null AND ACF_Process_Complete__c = false AND LastModifiedDate > ', replace(activity('LookupLastUpdate').output.firstRow.LastUpdateDatetime, ' ', 'T'), 'Z')",
+							"type": "Expression"
+						},
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "test"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "inbound_acf",
+						"type": "DatasetReference",
+						"parameters": {
+							"filename": {
+								"value": "@concat('acf_id_', variables('run_dt_suffix'), '.csv')",
+								"type": "Expression"
+							},
+							"folder": "Id"
+						}
+					}
+				]
+			},
+			{
+				"name": "SetRunDatetime",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_datetime",
+					"value": {
+						"value": "@formatDateTime(pipeline().TriggerTime, 'yyyy-MM-dd HH:mm:ss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetRunDateSuffix",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_dt_suffix",
+					"value": {
+						"value": "@formatDateTime(pipeline().TriggerTime, 'yyyyMMdd_HHmmss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "formatContentId",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "getContentId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/getACFId",
+					"baseParameters": {
+						"filename": {
+							"value": "@concat('acf_id_', variables('run_dt_suffix'), '.csv')",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().globalParameters.env",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "LookupLastUpdate",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "acf_metadata.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "If NoNewContent",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "formatContentId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('formatContentId').output.runOutput, '')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "createPDF",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "getVersionData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Dev/SFDC/convertPDF",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"filename": {
+										"value": "@concat('content_data_', variables('run_dt_suffix'), '.csv')",
+										"type": "Expression"
+									},
+									"run_dt": {
+										"value": "@variables('run_dt_suffix')",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SFDC_Databricks",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "updateACFMetadata",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [
+								{
+									"activity": "updateProcessStatus",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "update_acf_metadata",
+									"type": "DataFlowReference",
+									"parameters": {
+										"last_update_datetime": {
+											"value": "'@{variables('run_datetime')}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"integrationRuntime": {
+									"referenceName": "SFDCTest",
+									"type": "IntegrationRuntimeReference"
+								},
+								"traceLevel": "Fine"
+							}
+						},
+						{
+							"name": "uploadPDFTest",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "createPDF",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat('PDF/', variables('run_dt_suffix'))",
+											"type": "Expression"
+										},
+										"wildcardFileName": "*.zip",
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "SftpWriteSettings",
+										"operationTimeout": "01:00:00",
+										"useTempFileRename": true
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "acf_pdf",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SFTP_outbound_pdf",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "uploadPdfNEDI",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "createPDF",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat('PDF/', variables('run_dt_suffix'))",
+											"type": "Expression"
+										},
+										"wildcardFileName": "*.zip",
+										"deleteFilesAfterCompletion": false
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "SftpWriteSettings",
+										"operationTimeout": "01:00:00",
+										"useTempFileRename": true
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "acf_pdf",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SFTP_NEDI_outbound_pdf",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "updateProcessStatus",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "uploadPdfNEDI",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "uploadPDFTest",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat('PDF/', variables('run_dt_suffix'))",
+											"type": "Expression"
+										},
+										"wildcardFileName": "*.csv",
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SalesforceSink",
+									"writeBatchSize": 100000,
+									"writeBehavior": "upsert",
+									"externalIdFieldName": "Id",
+									"ignoreNullValues": false
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "upsert_to_sfdc",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "salesforce_object",
+									"type": "DatasetReference",
+									"parameters": {
+										"object": "Account_Change_Form__c"
+									}
+								}
+							]
+						},
+						{
+							"name": "getVersionData",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Dev/SFDC/getVersionData",
+								"baseParameters": {
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"content_id": {
+										"value": "@activity('formatContentId').output.runOutput",
+										"type": "Expression"
+									},
+									"run_dt": {
+										"value": "@variables('run_dt_suffix')",
+										"type": "Expression"
+									}
+								},
+								"libraries": [
+									{
+										"pypi": {
+											"package": "simple-salesforce==1.12.5"
+										}
+									}
+								]
+							},
+							"linkedServiceName": {
+								"referenceName": "SFDC_Databricks",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "fail_email_alert",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "If NoNewContent",
+						"dependencyConditions": [
+							"Skipped",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+					"connectVia": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "@concat('{\n    \"Body\":\"<body><p style=\\\"color:#000000\\\";>Please find below the details for the ACF pipeline failure.<br /><br />Pipeline Name: ', pipeline().Pipeline, '<br />Pipeline Run ID: ', pipeline().RunId, '<br />Process Date: ', convertFromUtc(utcnow(), 'Eastern Standard Time'), ' EST<br /><br /><br /><h5 />[THIS IS AN AUTOMATED MESSAGE - PLEASE DO NOT REPLY DIRECTLY TO THIS EMAIL]</body>\", \n    \"EmailTo\":\"', variables('fail_email'), '\", \n    \"Subject\":\"ACF pipeline failed\"\n}')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"run_datetime": {
+				"type": "String"
+			},
+			"run_dt_suffix": {
+				"type": "String"
+			},
+			"fail_email": {
+				"type": "String",
+				"defaultValue": "george.bishop@ttecdigital.com,vivek.natan@ttecdigital.com,smit.patil@ttecdigital.com,praveen.kavali@ttecdigital.com,durga.jakka@ttecdigital.com,astha.saluja@ttecdigital.com,pawan.dixit@ttecdigital.com,priyank.dsilva@ttecdigital.com,purvesh.jain@ttecdigital.com,siva.kv@ttecdigital.com"
+			}
+		},
+		"folder": {
+			"name": "export"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:46Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

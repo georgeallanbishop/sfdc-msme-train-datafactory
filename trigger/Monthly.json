@@ -1,0 +1,28 @@
+{
+	"name": "Monthly",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2023-03-03T20:13:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						10
+					],
+					"weekDays": [
+						"Friday"
+					]
+				}
+			}
+		}
+	}
+}

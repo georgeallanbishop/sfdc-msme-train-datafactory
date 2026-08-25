@@ -1,0 +1,50 @@
+{
+	"name": "upsert_phone_preferences",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "contactPTC"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "Unpivot1"
+				},
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Select3"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "DerivedColumn2"
+				}
+			],
+			"script": "source(output(\n\t\tId as string,\n\t\tHomePhone as string,\n\t\tOtherPhone as string,\n\t\tPhone as string,\n\t\tMobilePhone as string,\n\t\tPTC__c as string,\n\t\tPTC_Scope__c as string,\n\t\tPTC_Source__c as string,\n\t\tPTC_Modified_Date__c as string,\n\t\tPTC_Expiration__c as string,\n\t\tSource as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/upsert_phone_preferences_*.csv']) ~> contactPTC\ncontactPTC select(mapColumn(\n\t\tId,\n\t\tPTC__c,\n\t\tPTC_Scope__c,\n\t\tPTC_Source__c,\n\t\tPTC_Modified_Date__c,\n\t\tPTC_Expiration__c,\n\t\tSource\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\ncontactPTC select(mapColumn(\n\t\tId,\n\t\tHomePhone,\n\t\tOtherPhone,\n\t\tPhone,\n\t\tMobilePhone\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect2 unpivot(output(\n\t\tPhone_Type as string,\n\t\tPhone_Number__c as string\n\t),\n\tungroupBy(Id),\n\tlateral: true,\n\tignoreNullPivots: true) ~> Unpivot1\nUnpivot1, Select1 join(Unpivot1@Id == Select1@Id,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join1\nJoin1 select(mapColumn(\n\t\tId = Unpivot1@Id,\n\t\tPhone_Type,\n\t\tPhone_Number__c,\n\t\tPTC__c,\n\t\tPTC_Scope__c,\n\t\tPTC_Source__c,\n\t\tPTC_Modified_Date__c,\n\t\tPTC_Expiration__c,\n\t\tSource\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select3\nSelect3 derive(Type__c = case(Phone_Type == 'HomePhone', 'LandLine', Phone_Type == 'Phone', 'Work', Phone_Type == 'MobilePhone', 'Mobile', Phone_Type == 'OtherPhone', 'OtherPhone'),\n\t\tActive__c = true(),\n\t\tContact__c = iif(Source == 'Contact', Id, toString(null())),\n\t\tLead__c = iif(Source == 'Lead', Id, toString(null()))) ~> DerivedColumn1\nDerivedColumn1 derive(Name = concat(Type__c, 'Preference'),\n\t\tUnique_Id__c = concat(Phone_Number__c, Id, Type__c)) ~> DerivedColumn2\nDerivedColumn2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ptc_Phone_Preferences__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tPhone_Number__c,\n\t\tPTC__c,\n\t\tPTC_Scope__c,\n\t\tPTC_Source__c,\n\t\tPTC_Modified_Date__c,\n\t\tPTC_Expiration__c,\n\t\tType__c,\n\t\tActive__c,\n\t\tContact__c,\n\t\tLead__c,\n\t\tName,\n\t\tUnique_Id__c\n\t),\n\tpartitionBy('hash', 1)) ~> sink1"
+		}
+	}
+}

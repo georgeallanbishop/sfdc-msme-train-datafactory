@@ -1,0 +1,145 @@
+{
+	"name": "ib_kpma_contact_update",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "inbound"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedInbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "RejectFile"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertLead"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesLead"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "caretDateContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "caretDateLead"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertOpportunity"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "DerivedColumn"
+				},
+				{
+					"name": "addADFId"
+				},
+				{
+					"name": "addRejectReason"
+				},
+				{
+					"name": "ConditionalSplit2"
+				},
+				{
+					"name": "Select5"
+				},
+				{
+					"name": "ConditionalSplit3"
+				},
+				{
+					"name": "Select6"
+				},
+				{
+					"name": "Select7"
+				},
+				{
+					"name": "Select8"
+				},
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "Select9"
+				},
+				{
+					"name": "Filter2"
+				},
+				{
+					"name": "Select10"
+				},
+				{
+					"name": "Filter3"
+				},
+				{
+					"name": "Filter4"
+				},
+				{
+					"name": "Select11"
+				},
+				{
+					"name": "Filter5"
+				},
+				{
+					"name": "ReplaceCaretString"
+				}
+			],
+			"script": "source(output(\n\t\tCONTACT_ID as string,\n\t\tPIPE_OPP_UID as string,\n\t\tCUSTOMER_ID as string,\n\t\tFIRST_NAME as string,\n\t\tMIDDLE_NAME as string,\n\t\tLAST_NAME as string,\n\t\tMEDICARE_FIRST_NAME as string,\n\t\tMEDICARE_MIDDLE_NAME as string,\n\t\tMEDICARE_LAST_NAME as string,\n\t\tHOME_ADDR1 as string,\n\t\tHOME_ADDR2 as string,\n\t\tHOME_CITY as string,\n\t\tHOME_STATE as string,\n\t\tHOME_ZIP as string,\n\t\tHOME_ZIP4 as string,\n\t\tMAIL_ADDR1 as string,\n\t\tMAIL_ADDR2 as string,\n\t\tMAIL_CITY as string,\n\t\tMAIL_STATE as string,\n\t\tMAIL_ZIP as string,\n\t\tMAIL_ZIP4 as string,\n\t\tPRI_PHONE as string,\n\t\tALT_PHONE as string,\n\t\tEMAIL_ID as string,\n\t\tBIRTHDT as string,\n\t\tGENDER as string,\n\t\tPREF_LANG as string,\n\t\tGROUP_TYPE as string,\n\t\tGROUP_NAME as string,\n\t\tPID as string,\n\t\tEU as string,\n\t\tMRN as string,\n\t\tKP_MBR as string,\n\t\tPROSPECT_TYPE as string,\n\t\tHICN as string,\n\t\tEFF_DT as string,\n\t\tPBP as string,\n\t\tFS_AGENT_ID as string,\n\t\tTS_AGENT_ID as string,\n\t\tDECEASED as string,\n\t\tDO_NOT_SOLICIT as string,\n\t\tDO_NOT_MAIL as string,\n\t\tDO_NOT_EMAIL as string,\n\t\tDO_NOT_CALL as string,\n\t\tDUPE_FLAG as string,\n\t\tCONTACT_OWNER as string,\n\t\tCELL_PHONE as string,\n\t\tWORK_PHONE as string,\n\t\tINTEREST_LEVEL as string,\n\t\tINTEREST_LEVEL_QUALIFIER as string,\n\t\tRETIREMENT_DATE as string,\n\t\tDUAL_COVERAGE as string,\n\t\tTEST_FLAG as string,\n\t\tNOTES as string,\n\t\tSUBGROUP_NAME as string,\n\t\tPROMO_ID as string,\n\t\tPLAN_ID as string,\n\t\tCONVERSION_TYPE as string,\n\t\tPURL as string,\n\t\tBADEMAIL as string,\n\t\tBESTTIME as string,\n\t\tCMS_ENROLL_SUBMIT_DATE as string,\n\t\tCMS_FILE_DATE as string,\n\t\tEMPLOYER_GROUP_NUM as string,\n\t\tEMPLOYER_GROUP_TYPE as string,\n\t\tMEDNET_APP_ID as string,\n\t\tMEDNET_APP_SUBMIT_DATE as string,\n\t\tDEPENDENT_CONTACT_ID as string,\n\t\tDEPENDENT_MRN as string,\n\t\tDEPENDENT_SPOUSE as string,\n\t\tDEPS_HAS_DUAL_COVERAGE as string,\n\t\tDEPS_IS_MEMBER as string,\n\t\tDEPS_OTHER_COVERAGE as string,\n\t\tGROUPMEDICAREPLAN as string,\n\t\tKPRE_ID as string,\n\t\tMAILING_ADDRESS_CHANGE as string,\n\t\tMEDICALSERVICEAREA as string,\n\t\tMEDNAMESAME as string,\n\t\tMEMBER as string,\n\t\tMEMBERTYPE as string,\n\t\tNAME_CHANGE as string,\n\t\tNOTINTERESTED as string,\n\t\tOK_TO_CALL_LIS as string,\n\t\tOK_TO_EMAIL_FOR_SEMINARS as string,\n\t\tOK_TO_IVR as string,\n\t\tPTC as string,\n\t\tPTC_DATE as string,\n\t\tPTC_EXPIRATION as string,\n\t\tPTC_MODIFIED_BY as string,\n\t\tPTC_SCOPE as string,\n\t\tPTC_SOURCE as string,\n\t\tPTE as string,\n\t\tPTE_DATE as string,\n\t\tPTE_EXPIRATION as string,\n\t\tPTE_MODIFIED_BY as string,\n\t\tPTE_SCOPE as string,\n\t\tPTE_SOURCE as string,\n\t\tPLAN_NAME as string,\n\t\tPRIMARY_ADDRESS_CHANGE as string,\n\t\tPRIMARY_PRODUCT_OF_INTEREST as string,\n\t\tSAME as string,\n\t\tSUBSCRIBER_CONTACT_ID as string,\n\t\tSUBSCRIBER_MRN as string,\n\t\tTEFRA as string,\n\t\tBC2_CONTACT_ID as string,\n\t\tEMPLOYER_GROUP as string,\n\t\tMEDICAID_NUMBER as string,\n\t\tISMEDICARE as string,\n\t\tOK_TO_MAIL as string,\n\t\tGROUP_SIZE as string,\n\t\tSECONDARY_MRN as string,\n\t\tMEMBERSHIP_STATUS as string,\n\t\tLIS as string,\n\t\tDUALS as string,\n\t\tHOME_COUNTY as string,\n\t\tMAILING_COUNTY as string,\n\t\tPTT as string,\n\t\tPTT_SCOPE as string,\n\t\tPTT_SOURCE as string,\n\t\tPTT_DATE as string,\n\t\tDIGITAL_ID as string,\n\t\tSPECIAL_COHORT as string,\n\t\tMRN_PREFIX as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_contact_update*']) ~> inbound\nDerivedColumn select(mapColumn(\n\t\tADFId__c,\n\t\tId = CONTACT_ID,\n\t\tCustomer_Id__c = CUSTOMER_ID,\n\t\tFirstName = FIRST_NAME,\n\t\tMiddleName = MIDDLE_NAME,\n\t\tLastName = LAST_NAME,\n\t\tMedicare_First_Name__c = MEDICARE_FIRST_NAME,\n\t\tMedicareMiddleInitial__c = MEDICARE_MIDDLE_NAME,\n\t\tMedicare_Last_Name__c = MEDICARE_LAST_NAME,\n\t\tOtherStreet,\n\t\tOtherCity = HOME_CITY,\n\t\tOtherStateCode = HOME_STATE,\n\t\tOTHERCOUNTRYCODE,\n\t\tOtherPostalCode,\n\t\tMailingStreet,\n\t\tMailingCity = MAIL_CITY,\n\t\tMailingStateCode = MAIL_STATE,\n\t\tMAILINGCOUNTRYCODE,\n\t\tMailingPostalCode,\n\t\tHomePhone = PRI_PHONE,\n\t\tOtherPhone = ALT_PHONE,\n\t\tEmail = EMAIL_ID,\n\t\tBirthdate = BIRTHDT,\n\t\tGender__c = GENDER,\n\t\tPreferred_Spoken_Language__c = PREF_LANG,\n\t\tGroup_Type__c = GROUP_TYPE,\n\t\tGroup_Name__c = GROUP_NAME,\n\t\tGroup_Number__c = PID,\n\t\tSubgroup_Number__c = EU,\n\t\tMedical_Record_Number__c = MRN,\n\t\tKPMember__c = KP_MBR,\n\t\tProspect_Type__c = PROSPECT_TYPE,\n\t\tMBI__c = HICN,\n\t\tDeceased__c = DECEASED,\n\t\tDo_Not_Solicit__c = DO_NOT_SOLICIT,\n\t\tDo_Not_Mail__c = DO_NOT_MAIL,\n\t\tHasOptedOutOfEmail = DO_NOT_EMAIL,\n\t\tDoNotCall = DO_NOT_CALL,\n\t\tMobilePhone = CELL_PHONE,\n\t\tPhone = WORK_PHONE,\n\t\tinterest_level__c = INTEREST_LEVEL,\n\t\tInterest_Level_Reason__c = INTEREST_LEVEL_QUALIFIER,\n\t\tretirement_date__c = RETIREMENT_DATE,\n\t\tHas_dual_coverage__c = DUAL_COVERAGE,\n\t\tTest_Contact__c = TEST_FLAG,\n\t\tSubgroup_Name__c = SUBGROUP_NAME,\n\t\tPromo_Id__c = PROMO_ID,\n\t\tConversion_Type__c = CONVERSION_TYPE,\n\t\tGroupMedicarePlan__c = GROUPMEDICAREPLAN,\n\t\tMedicare_Permission_to_Call__c = PTC,\n\t\tMedicare_Permission_to_Call_Scope__c = PTC_SCOPE,\n\t\tMedicare_Permission_to_Call_Source__c = PTC_SOURCE,\n\t\tMedicare_Permission_to_Call_Expire_Date__c = PTC_EXPIRATION,\n\t\tMedicare_Permission_to_Email__c = PTE,\n\t\tMedicare_Permission_to_Email_Scope__c = PTE_SCOPE,\n\t\tMedicare_Permission_to_Email_Source__c = PTE_SOURCE,\n\t\tMedicare_Permission_to_Email_Expiration__c = PTE_EXPIRATION,\n\t\tMedicare_Permission_to_IVR__c = OK_TO_IVR,\n\t\tSubscriber_MRN__c = SUBSCRIBER_MRN,\n\t\tSubscriber_Contact_Id__c = SUBSCRIBER_CONTACT_ID,\n\t\tBad_Email__c = BADEMAIL,\n\t\tBest_Time_to_Reach__c = BESTTIME,\n\t\tCMS_ENROLL_SUBMIT_DATE__c = CMS_ENROLL_SUBMIT_DATE,\n\t\tCMS_FILE_DATE__c = CMS_FILE_DATE,\n\t\temployerGroupNum__c = EMPLOYER_GROUP_NUM,\n\t\tEmployer_Group_Type__c = EMPLOYER_GROUP_TYPE,\n\t\tMEDNET_APP_ID__c = MEDNET_APP_ID,\n\t\tMEDNET_APP_SUBMIT_DATE__c = MEDNET_APP_SUBMIT_DATE,\n\t\tDependent_Contact_Id__c = DEPENDENT_CONTACT_ID,\n\t\tDependent_MRN__c = DEPENDENT_MRN,\n\t\tDependent_spouse__c = DEPENDENT_SPOUSE,\n\t\tDeps_has_dual_coverage__c = DEPS_HAS_DUAL_COVERAGE,\n\t\tDeps_is_member__c = DEPS_IS_MEMBER,\n\t\tDeps_other_coverage__c = DEPS_OTHER_COVERAGE,\n\t\tKpre_id__c = KPRE_ID,\n\t\tmailing_address_change__c = MAILING_ADDRESS_CHANGE,\n\t\tMedical_Service_Area__c = MEDICALSERVICEAREA,\n\t\tMedNameSame__c = MEDNAMESAME,\n\t\tMember__c = MEMBER,\n\t\tMember_Type__c = MEMBERTYPE,\n\t\tname_change__c = NAME_CHANGE,\n\t\tnotInterested__c = NOTINTERESTED,\n\t\tOk_to_Call_Lis__c = OK_TO_CALL_LIS,\n\t\tPbp__c = PBP,\n\t\tPlan_Id__c = PLAN_ID,\n\t\tPlan_Name__c = PLAN_NAME,\n\t\tprimary_address_change__c = PRIMARY_ADDRESS_CHANGE,\n\t\tPrimary_product_of_interest__c = PRIMARY_PRODUCT_OF_INTEREST,\n\t\tSame__c = SAME,\n\t\tTEFRA__c = TEFRA,\n\t\tBC2_CONTACT_ID__c = BC2_CONTACT_ID,\n\t\tEffective_Date__c = EFF_DT,\n\t\tMedicare_Permission_to_Mail__c = OK_TO_MAIL,\n\t\tMembership_Status__c = MEMBERSHIP_STATUS,\n\t\tLIS__C = LIS,\n\t\tDuals__C = DUALS,\n\t\tIs_Medicare__c = ISMEDICARE,\n\t\tNotes__c = NOTES,\n\t\tCoverage_Address_County__c = HOME_COUNTY,\n\t\tCounty__c = MAILING_COUNTY,\n\t\tMedicare_Permission_to_Text_New__c = PTT,\n\t\tMedicare_Permission_to_Text_Scope__c = PTT_SCOPE,\n\t\tMedicare_Permission_to_Text_Source__c = PTT_SOURCE,\n\t\tMedicare_Permission_to_Text_Expire_Date__c = PTT_DATE,\n\t\tDigital_ID__c = DIGITAL_ID,\n\t\tSpecial_Cohort__c = SPECIAL_COHORT,\n\t\tMedical_Record_Number_Prefix__c = MRN_PREFIX\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select2\nReplaceCaretString derive(OtherStreet = concatWS(' ',HOME_ADDR1,HOME_ADDR2),\n\t\tOtherPostalCode = concatWS('-',toString(HOME_ZIP),toString(HOME_ZIP4)),\n\t\tMailingStreet = concatWS(' ',MAIL_ADDR1,MAIL_ADDR2),\n\t\tMailingPostalCode = concatWS('-',toString(MAIL_ZIP),toString(MAIL_ZIP4)),\n\t\tPTC_DATE = coalesce(toString(toDate(PTC_DATE, 'MM/dd/yyyy')), PTC_DATE),\n\t\tPTC_EXPIRATION = iif(upper(PTC) == 'NO', toString(null()), coalesce(toString(toDate(PTC_EXPIRATION, 'MM/dd/yyyy')), PTC_EXPIRATION)),\n\t\tPTE_DATE = coalesce(toString(toDate(PTE_DATE, 'MM/dd/yyyy')),PTE_DATE),\n\t\tPTE_EXPIRATION = iif(upper(PTE) == 'NO', toString(null()),coalesce(toString(toDate(PTE_EXPIRATION, 'MM/dd/yyyy')),PTE_EXPIRATION)),\n\t\tDO_NOT_MAIL = iif(upper(DO_NOT_MAIL)=='Y','yes', iif(upper(DO_NOT_MAIL)=='N','no', DO_NOT_MAIL)),\n\t\tDO_NOT_SOLICIT = case(isNull(DO_NOT_SOLICIT),'false',coalesce(toString(toBoolean(DO_NOT_SOLICIT)),DO_NOT_SOLICIT)),\n\t\tGENDER = case(upper(GENDER) == 'F', 'Female', upper(GENDER) == 'M', 'Male',  upper(GENDER) == 'U', 'Undeclared', GENDER),\n\t\tOK_TO_EMAIL_FOR_SEMINARS = case(isNull(OK_TO_EMAIL_FOR_SEMINARS),'false',coalesce(toString(toBoolean(OK_TO_EMAIL_FOR_SEMINARS)),OK_TO_EMAIL_FOR_SEMINARS)),\n\t\tPREF_LANG = case(lower(PREF_LANG) == 'eng', 'English', lower(PREF_LANG) == 'spa', 'Spanish', PREF_LANG),\n\t\tBADEMAIL = case(isNull(BADEMAIL),'false',coalesce(toString(toBoolean(BADEMAIL)),BADEMAIL)),\n\t\tNOTINTERESTED = case(isNull(NOTINTERESTED),'false',coalesce(toString(toBoolean(NOTINTERESTED)),NOTINTERESTED)),\n\t\tRETIREMENT_DATE = iif(RETIREMENT_DATE == '^', '1800-01-01', coalesce(toString(toDate(RETIREMENT_DATE, 'yyyyMMdd')),RETIREMENT_DATE)),\n\t\tMAILINGCOUNTRYCODE = case(isNull(MAIL_STATE) == false(), 'US'),\n\t\tOTHERCOUNTRYCODE = case(isNull(HOME_STATE) == false(), 'US'),\n\t\tCMS_ENROLL_SUBMIT_DATE = coalesce(toString(toDate(CMS_ENROLL_SUBMIT_DATE, 'MM/dd/yyyy')), CMS_ENROLL_SUBMIT_DATE),\n\t\tCMS_FILE_DATE = coalesce(toString(toDate(CMS_FILE_DATE, 'MM/dd/yyyy')), CMS_FILE_DATE),\n\t\tMEDNET_APP_SUBMIT_DATE = coalesce(toString(toTimestamp(MEDNET_APP_SUBMIT_DATE, 'yyyyMMdd HH:mm')), MEDNET_APP_SUBMIT_DATE),\n\t\tDECEASED = coalesce(toString(toBoolean(DECEASED)),DECEASED),\n\t\tBIRTHDT = coalesce(toString(toDate(BIRTHDT, 'yyyyMMdd')), BIRTHDT),\n\t\tDO_NOT_EMAIL = iif(upper(DO_NOT_EMAIL)=='Y','yes', iif(upper(DO_NOT_EMAIL)=='N','no', DO_NOT_EMAIL)),\n\t\tDO_NOT_CALL = coalesce(toString(toBoolean(DO_NOT_CALL)),DO_NOT_CALL),\n\t\tDUPE_FLAG = coalesce(toString(toBoolean(DUPE_FLAG)),DUPE_FLAG),\n\t\tEFF_DT = coalesce(toString(toDate(EFF_DT, 'yyyyMMdd')), EFF_DT)) ~> DerivedColumn\ninbound derive(ADFId__c = uuid()) ~> addADFId\naddADFId derive(REJECT_REASON = case(isNull(CONTACT_ID), 'ADF:REQUIRED FIELD MISSING: CONTACT_ID', \r\n\r\n(INTEREST_LEVEL == 'Continuing to Work') && ((INTEREST_LEVEL_QUALIFIER != 'No Retirement Date') || isNull(INTEREST_LEVEL_QUALIFIER)) && (isNull(RETIREMENT_DATE) || (RETIREMENT_DATE == '^')), 'ADF:REQUIRED FIELD MISSING: RETIREMENT DATE',\r\n (not(startsWith(CONTACT_ID, '003')) && not(startsWith(CONTACT_ID, '00Q'))), 'ADF:INVALID CONTACT_ID', \r\n (isNull(PTT)==false()&&(lower(PTT)!='yes'&&lower(PTT)!='no')||lower(PTT)=='yes'&&(isNull(PTT_SCOPE)||isNull(PTT_SOURCE))),'ADF: PTT ERROR')) ~> addRejectReason\naddRejectReason split(isNull(REJECT_REASON) == false(),\n\tdisjoint: false) ~> ConditionalSplit2@(toReject, toUpsert)\nConditionalSplit2@toReject select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select5\nSelect2 split(startsWith(Id, '003'),\n\tstartsWith(Id, '00Q'),\n\tdisjoint: false) ~> ConditionalSplit3@(splitContact, splitLead)\nConditionalSplit3@splitLead select(mapColumn(\n\t\tADFId__c,\n\t\tId,\n\t\tCustomer_Id__c,\n\t\tFirstName,\n\t\tMiddleName,\n\t\tLastName,\n\t\tMedicare_First_Name__c,\n\t\tMEDICARE_MIDDLE_NAME__c = MedicareMiddleInitial__c,\n\t\tMedicare_Last_Name__c,\n\t\tOtherStreet__c = OtherStreet,\n\t\tOtherCity__c = OtherCity,\n\t\tOtherState__c = OtherStateCode,\n\t\tOtherPostalCode__c = OtherPostalCode,\n\t\tStreet = MailingStreet,\n\t\tCity = MailingCity,\n\t\tStateCode = MailingStateCode,\n\t\tCOUNTRYCODE = MAILINGCOUNTRYCODE,\n\t\tPostalCode = MailingPostalCode,\n\t\tHome_Phone__c = HomePhone,\n\t\tOther_Phone__c = OtherPhone,\n\t\tEmail,\n\t\tBirthdate__c = Birthdate,\n\t\tGender__c,\n\t\tPreferred_Spoken_Language__c,\n\t\tGroup_Type__c,\n\t\tGroup_Name__c,\n\t\tGroup_Number__c,\n\t\tSubgroup_Number__c,\n\t\tKPMember__c,\n\t\tMember_Type__c,\n\t\tMBI__c,\n\t\tDeceased__c,\n\t\tDo_Not_Solicit__c,\n\t\tDo_Not_Mail__c,\n\t\tHasOptedOutOfEmail,\n\t\tDoNotCall,\n\t\tMobilePhone,\n\t\tPhone,\n\t\tinterest_level__c,\n\t\tretirement_date__c,\n\t\tHas_dual_coverage__c,\n\t\ttest_flag__c = Test_Contact__c,\n\t\tSubgroup_Name__c,\n\t\tPromo_Id__c,\n\t\tConversion_Type__c,\n\t\tGroupMedicarePlan__c,\n\t\tMedicare_Permission_to_Call__c,\n\t\tMedicare_Permission_to_Call_Scope__c,\n\t\tMedicare_Permission_to_Call_Source__c,\n\t\tMedicare_Permission_to_Call_Expire_Date__c,\n\t\tMedicare_Permission_to_Email__c,\n\t\tMedicare_Permission_to_Email_Scope__c,\n\t\tMedicare_Permission_to_Email_Source__c,\n\t\tMedicare_Permission_to_Email_Expiration__c,\n\t\tMedicare_Permission_to_IVR__c,\n\t\tSubscriber_MRN__c,\n\t\tSubscriber_Contact_Id__c,\n\t\tBad_Email__c,\n\t\tBest_Time__c = Best_Time_to_Reach__c,\n\t\tCMS_ENROLL_SUBMIT_DATE__c,\n\t\tCMS_FILE_DATE__c,\n\t\temployerGroupNum__c,\n\t\tEmployer_Group_Type__c,\n\t\tMEDNET_APP_ID__c,\n\t\tMEDNET_APP_SUBMIT_DATE__c,\n\t\tDependent_Contact_Id__c,\n\t\tDependent_MRN__c,\n\t\tDependent_spouse__c,\n\t\tDeps_has_dual_coverage__c,\n\t\tDeps_is_member__c,\n\t\tDeps_other_coverage__c,\n\t\tKpre_id__c,\n\t\tmailing_address_change__c,\n\t\tMedicalServiceArea__c = Medical_Service_Area__c,\n\t\tMedNameSame__c,\n\t\tMember__c,\n\t\tname_change__c,\n\t\tnotInterested__c,\n\t\tOk_to_Call_Lis__c,\n\t\tPbp__c,\n\t\tPlan_Id__c,\n\t\tPlan_Name__c,\n\t\tprimary_address_change__c,\n\t\tPrimary_product_of_interest__c,\n\t\tSame__c,\n\t\tTEFRA__c,\n\t\tBC2_CONTACT_ID__c,\n\t\tEffective_Date__c,\n\t\tMedicare_Permission_to_Call__c = Medicare_Permission_to_Mail__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select6\nConditionalSplit3@splitContact select(mapColumn(\n\t\tADFId__c,\n\t\tId,\n\t\tNotes__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select7\nConditionalSplit3@splitLead select(mapColumn(\n\t\tADFId__c,\n\t\tId,\n\t\tNotes__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select8\nConditionalSplit3@splitContact filter(retirement_date__c=='1900-01-01'||Birthdate=='1900-01-01'||Effective_Date__c=='1900-01-01'||CMS_ENROLL_SUBMIT_DATE__c=='1900-01-01'||CMS_FILE_DATE__c=='1900-01-01'||MEDNET_APP_SUBMIT_DATE__c=='1900-01-01'||Medicare_Permission_to_Email_Expiration__c=='1900-01-01'||Medicare_Permission_to_Call_Expire_Date__c=='1900-01-01') ~> Filter1\nFilter1 select(mapColumn(\n\t\tId,\n\t\tkp_Retirement_Date__c = retirement_date__c,\n\t\tkp_Birthdate = Birthdate,\n\t\tkp_Effective_Date__c = Effective_Date__c,\n\t\tkp_CMS_ENROLL_SUBMIT_DATE__c = CMS_ENROLL_SUBMIT_DATE__c,\n\t\tkp_CMS_FILE_DATE__c = CMS_FILE_DATE__c,\n\t\tkp_MEDNET_APP_SUBMIT_DATE__c = MEDNET_APP_SUBMIT_DATE__c,\n\t\tkp_Medicare_Permission_to_Call_Expire_Date__c = Medicare_Permission_to_Call_Expire_Date__c,\n\t\tkp_Medicare_Permission_to_Email_Expiration__c = Medicare_Permission_to_Email_Expiration__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select9\nConditionalSplit3@splitLead filter(retirement_date__c=='1900-01-01'||Birthdate=='1900-01-01'||Effective_Date__c=='1900-01-01'||CMS_ENROLL_SUBMIT_DATE__c=='1900-01-01'||CMS_FILE_DATE__c=='1900-01-01'||MEDNET_APP_SUBMIT_DATE__c=='1900-01-01'||Medicare_Permission_to_Email_Expiration__c=='1900-01-01'||Medicare_Permission_to_Call_Expire_Date__c=='1900-01-01') ~> Filter2\nFilter2 select(mapColumn(\n\t\tId,\n\t\tkp_RETIREMENT_DATE__c = retirement_date__c,\n\t\tkp_Birthdate__c = Birthdate,\n\t\tkp_Effective_Date__c = Effective_Date__c,\n\t\tkp_CMS_ENROLL_SUBMIT_DATE__c = CMS_ENROLL_SUBMIT_DATE__c,\n\t\tkp_CMS_FILE_DATE__c = CMS_FILE_DATE__c,\n\t\tkp_MEDNET_APP_SUBMIT_DATE__c = MEDNET_APP_SUBMIT_DATE__c,\n\t\tkp_Medicare_Permission_to_Call_Expire_Date__c = Medicare_Permission_to_Call_Expire_Date__c,\n\t\tkp_Medicare_Permission_to_Email_Expiration__c = Medicare_Permission_to_Email_Expiration__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select10\nSelect7 filter(isNull(Notes__c)==false()) ~> Filter3\nSelect8 filter(isNull(Notes__c) == false()) ~> Filter4\nConditionalSplit2@toUpsert select(mapColumn(\n\t\tADFId__c,\n\t\tId = PIPE_OPP_UID,\n\t\tPURL__c = PURL,\n\t\tEffective_Date__c = EFF_DT,\n\t\tPBP__c = PBP,\n\t\tFS_Agent_ID__c = FS_AGENT_ID,\n\t\tTS_Agent_Id__c = TS_AGENT_ID\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select11\nSelect11 filter(isNull(PURL__c) == false()) ~> Filter5\nConditionalSplit2@toUpsert derive(each(match(in(['PURL','NOTES','RETIREMENT_DATE','BIRTHDT','EFF_DT','CMS_ENROLL_SUBMIT_DATE','CMS_FILE_DATE','MEDNET_APP_SUBMIT_DATE','PTE_EXPIRATION','PTC_EXPIRATION'],name)==false()), $$ = iif($$ == '^', ' ', $$)),\n\t\teach(match(in(['RETIREMENT_DATE','BIRTHDT','EFF_DT','CMS_ENROLL_SUBMIT_DATE','CMS_FILE_DATE','MEDNET_APP_SUBMIT_DATE','PTE_EXPIRATION','PTC_EXPIRATION'],name)==true()), $$ = iif($$ == '^', '1900-01-01', $$))) ~> ReplaceCaretString\nConditionalSplit3@splitContact sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_contact_update_Contact.csv'],\n\tmapColumn(\n\t\teach(match(name!='Notes__c'))\n\t),\n\tpartitionBy('hash', 1)) ~> upsertContact\naddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_contact_update_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedInbound\nSelect5 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_contact_update_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> RejectFile\nSelect6 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_contact_update_Lead.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> upsertLead\nFilter3 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['contact_update_Contact_Notes.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> notesContact\nFilter4 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['contact_update_Lead_Notes.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> notesLead\nSelect9 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['contact_update_caret_date_Contact.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> caretDateContact\nSelect10 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['contact_update_caret_date_Lead.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> caretDateLead\nFilter5 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_contact_update_Opportunity.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> upsertOpportunity"
+		}
+	}
+}

@@ -1,0 +1,64 @@
+{
+	"name": "ib_kpma_campaign_member",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertcampaignmember"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "toReject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "addADFId1"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectReason"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\tContact_Id as string,\n\t\tCampaign_Id as string,\n\t\tType as string,\n\t\tStatus as string,\n\t\tDisposition as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_campaign_member*']) ~> source1\nConditionalSplit1@Upsert derive(Type = \"Contact\",\n\t\tStatus = \"Sent\") ~> DerivedColumn1\nDerivedColumn1 select(mapColumn(\n\t\tADFId__c,\n\t\tContactId = Contact_Id,\n\t\tCampaignId = Campaign_Id\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nsource1 derive(ADFId__c = uuid()) ~> addADFId1\naddADFId1 split(isNull(Contact_Id)||isNull(Campaign_Id),\n\tdisjoint: false) ~> ConditionalSplit1@(Reject, Upsert)\nConditionalSplit1@Reject derive(REJECT_REASON = concat('ADF:Required Field Contains NULL Value: ', iif(isNull(Contact_Id), 'Contact_Id', ''), iif(isNull(Campaign_Id), 'Campaign_Id', ''), '')) ~> rejectReason\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_campaign_member_CampaignMember.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertcampaignmember\naddADFId1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_campaign_member_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_campaign_member_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toReject"
+		}
+	}
+}

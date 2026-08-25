@@ -1,0 +1,31 @@
+{
+	"name": "SFDC_photon",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-3789908119125881.1.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sfdc-databricks-token"
+			},
+			"instancePoolId": "1231-212431-nod176-pool-edjja8j7",
+			"newClusterNumOfWorker": "2:8",
+			"newClusterSparkEnvVars": {
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "12.2.x-scala2.12",
+			"newClusterInitScripts": [],
+			"clusterOption": "Autoscaling"
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

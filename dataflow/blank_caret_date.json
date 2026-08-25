@@ -1,0 +1,84 @@
+{
+	"name": "blank_caret_date",
+	"properties": {
+		"folder": {
+			"name": "post_import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "caretDateContactSF"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "caretDateLeadSF"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "caretDateContactFile"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "caretDateLeadFile"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertCaretDateContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertCaretDateLead"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Join2"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "Select3"
+				},
+				{
+					"name": "Select4"
+				},
+				{
+					"name": "TrimContactId"
+				},
+				{
+					"name": "TrimLeadId"
+				}
+			],
+			"script": "source(output(\n\t\tId as string,\n\t\tRetirement_Date__c as string,\n\t\tBirthdate as string,\n\t\tEffective_Date__c as string,\n\t\tCMS_ENROLL_SUBMIT_DATE__c as string,\n\t\tCMS_FILE_DATE__c as string,\n\t\tMEDNET_APP_SUBMIT_DATE__c as string,\n\t\tMedicare_Permission_to_Call_Expire_Date__c as string,\n\t\tMedicare_Permission_to_Email_Expiration__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/caret_date_Contact_update.csv']) ~> caretDateContactSF\nsource(output(\n\t\tId as string,\n\t\tRETIREMENT_DATE__c as string,\n\t\tBirthdate__c as string,\n\t\tEffective_Date__c as string,\n\t\tCMS_ENROLL_SUBMIT_DATE__c as string,\n\t\tCMS_FILE_DATE__c as string,\n\t\tMEDNET_APP_SUBMIT_DATE__c as string,\n\t\tMedicare_Permission_to_Call_Expire_Date__c as string,\n\t\tMedicare_Permission_to_Email_Expiration__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/caret_date_Lead_update.csv']) ~> caretDateLeadSF\nsource(output(\n\t\tId as string,\n\t\tkp_Retirement_Date__c as string,\n\t\tkp_Birthdate as string,\n\t\tkp_Effective_Date__c as string,\n\t\tkp_CMS_ENROLL_SUBMIT_DATE__c as string,\n\t\tkp_CMS_FILE_DATE__c as string,\n\t\tkp_MEDNET_APP_SUBMIT_DATE__c as string,\n\t\tkp_Medicare_Permission_to_Call_Expire_Date__c as string,\n\t\tkp_Medicare_Permission_to_Email_Expiration__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/contact_update_caret_date_Contact.csv']) ~> caretDateContactFile\nsource(output(\n\t\tId as string,\n\t\tkp_RETIREMENT_DATE__c as string,\n\t\tkp_Birthdate__c as string,\n\t\tkp_Effective_Date__c as string,\n\t\tkp_CMS_ENROLL_SUBMIT_DATE__c as string,\n\t\tkp_CMS_FILE_DATE__c as string,\n\t\tkp_MEDNET_APP_SUBMIT_DATE__c as string,\n\t\tkp_Medicare_Permission_to_Call_Expire_Date__c as string,\n\t\tkp_Medicare_Permission_to_Email_Expiration__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/contact_update_caret_date_Lead.csv']) ~> caretDateLeadFile\nTrimContactId, caretDateContactFile join(TrimContactId@Id == caretDateContactFile@Id,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join1\nTrimLeadId, caretDateLeadFile join(TrimLeadId@Id == caretDateLeadFile@Id,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join2\nJoin1 derive(Retirement_Date__c = iif(kp_Retirement_Date__c == '1900-01-01', toString(null()), Retirement_Date__c),\n\t\tBirthdate = iif(kp_Birthdate == '1900-01-01', toString(null()), Birthdate),\n\t\tEffective_Date__c = iif(kp_Effective_Date__c == '1900-01-01', toString(null()), Effective_Date__c),\n\t\tCMS_ENROLL_SUBMIT_DATE__c = iif(kp_CMS_ENROLL_SUBMIT_DATE__c == '1900-01-01', toString(null()), CMS_ENROLL_SUBMIT_DATE__c),\n\t\tCMS_FILE_DATE__c = iif(kp_CMS_FILE_DATE__c == '1900-01-01', toString(null()), CMS_FILE_DATE__c),\n\t\tMEDNET_APP_SUBMIT_DATE__c = iif(kp_MEDNET_APP_SUBMIT_DATE__c == '1900-01-01', toString(null()), MEDNET_APP_SUBMIT_DATE__c),\n\t\tMedicare_Permission_to_Call_Expire_Date__c = iif(kp_Medicare_Permission_to_Call_Expire_Date__c == '1900-01-01', toString(null()), Medicare_Permission_to_Call_Expire_Date__c),\n\t\tMedicare_Permission_to_Email_Expiration__c = iif(kp_Medicare_Permission_to_Email_Expiration__c == '1900-01-01', toString(null()), Medicare_Permission_to_Email_Expiration__c)) ~> DerivedColumn1\nJoin2 derive(RETIREMENT_DATE__c = iif(kp_RETIREMENT_DATE__c == '1900-01-01', toString(null()), RETIREMENT_DATE__c),\n\t\tBirthdate__c = iif(kp_Birthdate__c == '1900-01-01', toString(null()), Birthdate__c),\n\t\tEffective_Date__c = iif(kp_Effective_Date__c == '1900-01-01', toString(null()), Effective_Date__c),\n\t\tCMS_ENROLL_SUBMIT_DATE__c = iif(kp_CMS_ENROLL_SUBMIT_DATE__c == '1900-01-01', toString(null()), CMS_ENROLL_SUBMIT_DATE__c),\n\t\tCMS_FILE_DATE__c = iif(kp_CMS_FILE_DATE__c == '1900-01-01', toString(null()), CMS_FILE_DATE__c),\n\t\tMEDNET_APP_SUBMIT_DATE__c = iif(kp_MEDNET_APP_SUBMIT_DATE__c == '1900-01-01', toString(null()), MEDNET_APP_SUBMIT_DATE__c),\n\t\tMedicare_Permission_to_Call_Expire_Date__c = iif(kp_Medicare_Permission_to_Call_Expire_Date__c == '1900-01-01', toString(null()), Medicare_Permission_to_Call_Expire_Date__c),\n\t\tMedicare_Permission_to_Email_Expiration__c = iif(kp_Medicare_Permission_to_Email_Expiration__c == '1900-01-01', toString(null()), Medicare_Permission_to_Email_Expiration__c)) ~> DerivedColumn2\nDerivedColumn1 select(mapColumn(\n\t\tId = TrimContactId@Id,\n\t\tRetirement_Date__c,\n\t\tBirthdate,\n\t\tEffective_Date__c,\n\t\tCMS_ENROLL_SUBMIT_DATE__c,\n\t\tCMS_FILE_DATE__c,\n\t\tMEDNET_APP_SUBMIT_DATE__c,\n\t\tMedicare_Permission_to_Call_Expire_Date__c,\n\t\tMedicare_Permission_to_Email_Expiration__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select3\nDerivedColumn2 select(mapColumn(\n\t\tId = TrimLeadId@Id,\n\t\tRETIREMENT_DATE__c,\n\t\tBirthdate__c,\n\t\tEffective_Date__c,\n\t\tCMS_ENROLL_SUBMIT_DATE__c,\n\t\tCMS_FILE_DATE__c,\n\t\tMEDNET_APP_SUBMIT_DATE__c,\n\t\tMedicare_Permission_to_Call_Expire_Date__c,\n\t\tMedicare_Permission_to_Email_Expiration__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select4\ncaretDateContactSF derive(Id = left(Id, 15)) ~> TrimContactId\ncaretDateLeadSF derive(Id = left(Id, 15)) ~> TrimLeadId\nSelect3 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['update_caret_date_Contact.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> upsertCaretDateContact\nSelect4 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['update_caret_date_Lead.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> upsertCaretDateLead"
+		}
+	}
+}

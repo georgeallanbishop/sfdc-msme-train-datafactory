@@ -1,0 +1,29 @@
+{
+	"name": "sftp_inbound_binary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFTP",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"env": {
+				"type": "string"
+			},
+			"folder": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": {
+					"value": "@concat(dataset().env, '/', dataset().folder, '/inbound/*')",
+					"type": "Expression"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

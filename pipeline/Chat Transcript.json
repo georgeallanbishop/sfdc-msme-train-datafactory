@@ -1,0 +1,74 @@
+{
+	"name": "Chat Transcript",
+	"properties": {
+		"activities": [
+			{
+				"name": "FromSalesforce",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceSource",
+						"query": "SELECT Abandoned,AccountId,agentWindowCloseTimestamp__c,Agent_Handle_Time__c,Agent_Speed_To_Answer__c,Agent_Window_Close_Time__c,answeredTimestamp__c,AverageResponseTimeOperator,AverageResponseTimeVisitor,Body,Browser,BrowserLanguage,CaseId,chatbotAnsweredTimestamp__c,chatbotEndedTimestamp__c,ChatBot_Handle_Time__c,ChatButton_Text__c,ChatDuration,ChatKey,City__c,ContactId,County__c,CreatedById,CreatedDate,Disposition__c,DNIS__c,EmailYesNo__c,Email__c,EndedBy,EndTime,FirstName__c,Glance_Chat_Visitor_ID__c,Household_Size__c,Id,ID_Path_Selected__c,Income_Bracket__c,IntervalReport__c,IpAddress,IsChatbotSession,IsDeleted,Issue__c,Is_Member__c,LastModifiedById,LastModifiedDate,LastName__c,LastReferencedDate,LastViewedDate,LeadId,LiveChatButtonId,LiveChatDeploymentId,LiveChatVisitorId,LOB__c,Location,Location_state__c,MaxResponseTimeOperator,MaxResponseTimeVisitor,MRN__c,Name,Notes__c,OperatorMessageCount,Opportunity__c,OwnerId,Path_Selected__c,Phone__c,Platform,Product_Line_Selected__c,Promo_Id__c,ReferrerUri,requestedTimestamp__c,Requested_Effective_Date__c,RequestTime,Role__c,ScreenResolution,SelectedLOB__c,SkillId,sObjectName__c,sObject_Record_Type_Name__c,StartTime,State__c,Status,SupervisorTranscriptBody,SystemModstamp,Time_of_Day_PST__c,transferCompleted__c,transferRequested__c,UserAgent,VisitorMessageCount,VisitorNetwork,WaitTime,Zipcode__c FROM LiveChatTranscript",
+						"readBehavior": "query"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SF_UAT",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "LiveChatTranscript"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "LiveChatTranscript",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"variables": {
+			"schemas": {
+				"type": "Array"
+			},
+			"good_schema_files": {
+				"type": "Array"
+			},
+			"bad_name_files": {
+				"type": "Array"
+			},
+			"bad_schema_files": {
+				"type": "Array"
+			},
+			"test": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

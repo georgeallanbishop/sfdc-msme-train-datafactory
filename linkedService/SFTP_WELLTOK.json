@@ -1,0 +1,27 @@
+{
+	"name": "SFTP_WELLTOK",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Sftp",
+		"typeProperties": {
+			"host": "sftpweb01.silverlink.com",
+			"port": 22,
+			"skipHostKeyValidation": true,
+			"authenticationType": "Basic",
+			"userName": "5122kpifnational8kp",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sftp-welltok"
+			}
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

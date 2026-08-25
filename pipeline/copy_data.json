@@ -1,0 +1,159 @@
+{
+	"name": "copy_data",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupUploadedFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('LookupUploadedFiles').output.childItems",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "CheckCount",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "FILE_NAME",
+											"value": "$$FILEPATH"
+										}
+									],
+									"storeSettings": {
+										"type": "SftpReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat(pipeline().parameters.env, '/*/inbound')",
+											"type": "Expression"
+										},
+										"wildcardFileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".csv"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "sftp_inbound",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().parameters.env",
+											"type": "Expression"
+										},
+										"folder": "*"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "inbound_raw_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "LookupUploadedFiles",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "sftp_inbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"env": {
+								"value": "@pipeline().parameters.env",
+								"type": "Expression"
+							},
+							"folder": "*"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "SftpReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"env": {
+				"type": "string",
+				"defaultValue": "test"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:42Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

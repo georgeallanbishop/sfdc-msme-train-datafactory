@@ -1,0 +1,35 @@
+{
+	"name": "ob_kpma_seminar_update",
+	"properties": {
+		"folder": {
+			"name": "export"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "export_files",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				}
+			],
+			"script": "source(output(\n\t\tId as string,\n\t\tMeeting_Date__c as string,\n\t\tStart_Time__c as string,\n\t\tEnd_Time__c as string,\n\t\tPresenting_Agent__c as string,\n\t\tAttending_Agent_1__c as string,\n\t\tStatus__c as string,\n\t\tMeeting_Type__c as string,\n\t\tMeeting_FormalInformal__c as string,\n\t\tLanguage__c as string,\n\t\tMaximum_Capacity__c as double,\n\t\tMeeting_Products__c as string,\n\t\tFacility__c as string,\n\t\tNote__c as string,\n\t\tLastModifiedDate as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['salesforce/ob_kpma_seminar_update*']) ~> source1\nsource1 select(mapColumn(\n\t\tMEETING_ID = Id,\n\t\tMEETING_DATE = Meeting_Date__c,\n\t\tMEETING_START_TIME = Start_Time__c,\n\t\tMEETING_END_TIME = End_Time__c,\n\t\tOWNING_AGENT = Presenting_Agent__c,\n\t\tATTENDING_AGENT = Attending_Agent_1__c,\n\t\tSTATUS = Status__c,\n\t\tMEETING_EVENT_TYPE = Meeting_Type__c,\n\t\tFORMAL_INFORMAL = Meeting_FormalInformal__c,\n\t\tLANGUAGE = Language__c,\n\t\tMAX_SEATING_CAPACITY = Maximum_Capacity__c,\n\t\tPRODUCTS = Meeting_Products__c,\n\t\tFACILITY_UID = Facility__c,\n\t\tMEETING_NOTES = Note__c,\n\t\tREJECT_REASON = LastModifiedDate\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('ob_kpma_seminar_update_', toString(currentUTC(), 'yyyyMMdd_HHmmss'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink1"
+		}
+	}
+}

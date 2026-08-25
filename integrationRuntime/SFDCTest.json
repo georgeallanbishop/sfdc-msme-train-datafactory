@@ -1,0 +1,17 @@
+{
+	"name": "SFDCTest",
+	"properties": {
+		"type": "Managed",
+		"typeProperties": {
+			"computeProperties": {
+				"location": "West US",
+				"dataFlowProperties": {
+					"computeType": "General",
+					"coreCount": 8,
+					"timeToLive": 0,
+					"cleanup": true
+				}
+			}
+		}
+	}
+}

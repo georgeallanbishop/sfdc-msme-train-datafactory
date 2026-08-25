@@ -1,0 +1,24 @@
+{
+	"name": "insert_to_sfdc",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "sfdcdataxchange",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "insert_to_sfdc",
+				"container": "outbound"
+			},
+			"columnDelimiter": "|",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

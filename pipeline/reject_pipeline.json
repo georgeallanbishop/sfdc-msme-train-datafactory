@@ -1,0 +1,372 @@
+{
+	"name": "reject_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "RejectFileMetadata",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "reject_file_metadata.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "CreateRejectFiles",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "CheckFileUploaded",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('valid_reject_metadata')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "createRejectFile",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "create_reject_file",
+									"type": "DataFlowReference",
+									"parameters": {
+										"create_time": {
+											"value": "'@{pipeline().parameters.create_time}'",
+											"type": "Expression"
+										},
+										"filename_prefix": {
+											"value": "'@{item().FileNamePrefix}'",
+											"type": "Expression"
+										},
+										"output_prefix": {
+											"value": "'@{item().OutputPrefix}'",
+											"type": "Expression"
+										}
+									}
+								},
+								"integrationRuntime": {
+									"referenceName": "SFDCTest",
+									"type": "IntegrationRuntimeReference"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CheckFileUploaded",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "RejectFileMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('RejectFileMetadata').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "If Uploaded",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@contains(pipeline().parameters.processed_files_prefix, replace(item().FileNamePrefix, '_', ''))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "AddMetadata",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "valid_reject_metadata",
+											"value": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CreateRejectLog",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "CreateRejectFiles",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/createRejectLog",
+					"baseParameters": {
+						"processed_files": {
+							"value": "@string(pipeline().parameters.processed_files)",
+							"type": "Expression"
+						},
+						"pipeline_start_time": {
+							"value": "@pipeline().parameters.pipeline_start_time",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().parameters.env",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "UploadToSFTP",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "CreateRejectLog",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(activity('CreateRejectLog').output.runOutput.good_reject_files, '*')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "ValidFileName",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(length(item()),0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "CopyToSFTP",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": "reject_files",
+													"wildcardFileName": {
+														"value": "@json(item()).filename",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "SftpWriteSettings",
+													"operationTimeout": "01:00:00",
+													"useTempFileRename": true
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".txt"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "reject_files",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "sftp_outbound",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": {
+														"value": "@pipeline().parameters.env",
+														"type": "Expression"
+													},
+													"folder": {
+														"value": "@concat(json(item()).folder, '/outbound')",
+														"type": "Expression"
+													},
+													"filename": {
+														"value": "@json(item()).filename",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									},
+									{
+										"name": "EmailAlert_RejectFileCreated",
+										"type": "WebActivity",
+										"dependsOn": [
+											{
+												"activity": "CopyToSFTP",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+											"connectVia": {
+												"referenceName": "SFDCTest",
+												"type": "IntegrationRuntimeReference"
+											},
+											"body": {
+												"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', json(item()).filename, '</b> file has been created and uploaded to SFTP','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"',pipeline().globalParameters.email,'\",\"Subject\":\"',concat(json(item()).filename, ' file has been created in ', pipeline().parameters.env),'\"}')",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"create_time": {
+				"type": "string"
+			},
+			"processed_files_prefix": {
+				"type": "array"
+			},
+			"env": {
+				"type": "string"
+			},
+			"processed_files": {
+				"type": "array"
+			},
+			"pipeline_start_time": {
+				"type": "string"
+			},
+			"emails": {
+				"type": "string",
+				"defaultValue": "chris.gehn@kp.org,mtss-kpitsupport@kp.org,george.bishop@ttec.com,cheryl.stewart@ttec.com,siyu.liu@ttec.com"
+			}
+		},
+		"variables": {
+			"log_content": {
+				"type": "Array"
+			},
+			"reject_files": {
+				"type": "Array"
+			},
+			"valid_reject_metadata": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

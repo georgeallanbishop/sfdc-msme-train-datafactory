@@ -1,0 +1,32 @@
+{
+	"name": "sftp_outbound_license",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFTP",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"lic_env": {
+				"type": "string",
+				"defaultValue": "test"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": {
+					"value": "@concat('/',dataset().lic_env,'/sourceflow/outbound' )",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

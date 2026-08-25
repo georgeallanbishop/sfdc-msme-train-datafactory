@@ -1,0 +1,17 @@
+{
+	"name": "sfdcdataxchange",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": " ",
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"serviceEndpoint": "https://sfdcdataxchangetrain.blob.core.windows.net",
+			"accountKind": "StorageV2"
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

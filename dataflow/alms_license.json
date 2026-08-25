@@ -1,0 +1,51 @@
+{
+	"name": "alms_license",
+	"properties": {
+		"folder": {
+			"name": "alms"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_comma",
+						"type": "DatasetReference"
+					},
+					"name": "License"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_alms",
+						"type": "DatasetReference"
+					},
+					"name": "KaiserAgent"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_alms",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Join1"
+				}
+			],
+			"script": "source(output(\n\t\t{Agency NPN} as string,\n\t\t{Agency Name} as string,\n\t\t{Agent NPN} as string,\n\t\t{Agent Employee Number} as string,\n\t\t{Agent Status} as string,\n\t\tname_last as string,\n\t\tname_first as string,\n\t\tname_middle as string,\n\t\t{State License Abbreviation} as string,\n\t\t{State Name} as string,\n\t\t{State License Number} as string,\n\t\t{License Update Date} as string,\n\t\t{Original License Issue Date} as string,\n\t\t{License Expire Date} as string,\n\t\t{License Class Code} as string,\n\t\t{License Class Description} as string,\n\t\t{Residency Status} as string,\n\t\t{Active [License Status]} as string,\n\t\t{Record Create Date} as string,\n\t\t{Record Modify Date} as string,\n\t\t{agent location number} as string,\n\t\t{agent location name} as string,\n\t\t{Agent State License Status} as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: true,\n\twildcardPaths:['ALMS/alms_*_license_*']) ~> License\nsource(output(\n\t\t{Agent NPN} as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: true,\n\twildcardPaths:['ALMS/kaiser_agent.csv']) ~> KaiserAgent\nDerivedColumn1 filter(upper({Active [License Status]})=='YES') ~> Filter1\nJoin1 select(mapColumn(\n\t\tAgency_NPN__c = {Agency NPN},\n\t\tAgency_Name__c = {Agency Name},\n\t\tAgent_NPN__c = License@{Agent NPN},\n\t\tAgent_Employee_Number__c = {Agent Employee Number},\n\t\tAgent_Status__c = {Agent Status},\n\t\tname_last__c = name_last,\n\t\tname_first__c = name_first,\n\t\tname_middle__c = name_middle,\n\t\tState_License_Abbreviation__c = {State License Abbreviation},\n\t\tState_Name__c = {State Name},\n\t\tState_License_Number__c = {State License Number},\n\t\tLicense_Update_Date__c = {License Update Date},\n\t\tOriginal_License_Issue_Date__c = {Original License Issue Date},\n\t\tLicense_Expire_Date__c = expire_date,\n\t\tLicense_Class_Code__c = {License Class Code},\n\t\tLicense_Class_Description__c = {License Class Description},\n\t\tResidency_Status__c = {Residency Status},\n\t\tActive_License_Status__c = {Active [License Status]},\n\t\tRecord_Create_Date__c = {Record Create Date},\n\t\tRecord_Modify_Date__c = {Record Modify Date},\n\t\tagent_location_number__c = {agent location number},\n\t\tagent_location_name__c = {agent location name},\n\t\tAgent_State_License_Status__c = {Agent State License Status}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nLicense derive(expire_date = toString(toDate({License Expire Date}), 'MM/dd/yyyy HH:mm:ss')) ~> DerivedColumn1\nFilter1, KaiserAgent join(License@{Agent NPN} == KaiserAgent@{Agent NPN},\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join1\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('alms_license_', toString(currentUTC(), 'yyyyMMdd'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink1"
+		}
+	}
+}

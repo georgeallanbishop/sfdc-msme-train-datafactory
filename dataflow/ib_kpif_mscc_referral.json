@@ -1,0 +1,74 @@
+{
+	"name": "ib_kpif_mscc_referral",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "RecordTypeId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "toInsert"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "toReject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "ADFId"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectReason"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\tLead_ID as string,\n\t\tCustomer_ID as string,\n\t\tPromotion_ID as string,\n\t\tTitle as string,\n\t\tFirst_Name as string,\n\t\tMiddle_Initial as string,\n\t\tLast_Name as string,\n\t\tSuffix as string,\n\t\tGender as string,\n\t\tBirthdate as string,\n\t\tAddress_1 as string,\n\t\tAddress_2 as string,\n\t\tCity as string,\n\t\tState as string,\n\t\tZip as string,\n\t\tCounty as string,\n\t\tPhone as string,\n\t\tDo_Not_Call as string,\n\t\tEmail_Address as string,\n\t\tEmail_Opt_Out as string,\n\t\tToll_Free_Number_Called as string,\n\t\tTime_of_Call as string,\n\t\tDate_of_Call as string,\n\t\tCall_Disposition as string,\n\t\tPlan_Effective_Date as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_mscc_referral*']) ~> source1\nsource(output(\n\t\tRecordTypeId as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/mscc_referral_record_type_id.csv']) ~> RecordTypeId\nSelect1, RecordTypeId join(1 == 1,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> Join1\nDerivedColumn1 select(mapColumn(\n\t\tADFId__c,\n\t\tLead_ID__c = Lead_ID,\n\t\tCustomer_Agility_Id__c = Customer_ID,\n\t\tPromo_ID__c = Promotion_ID,\n\t\tSalutation__c = Title,\n\t\tFirst_Name__c = First_Name,\n\t\tMiddle_Name__c = Middle_Initial,\n\t\tLast_Name__c = Last_Name,\n\t\tSuffix__c = Suffix,\n\t\tGender__c = Gender,\n\t\tBirthdate__c = Birthdate,\n\t\tOther_Street_1__c = Address_1,\n\t\tOther_Street_2__c = Address_2,\n\t\tOther_City__c = City,\n\t\tOther_State__c = State,\n\t\tOther_Postal_Code__c = Zip,\n\t\tCounty__c = County,\n\t\tHome_Phone__c = Phone,\n\t\tDo_Not_Call__c = Do_Not_Call,\n\t\tEmail__c = Email_Address,\n\t\tHasOptedOutOfEmail__c,\n\t\tToll_Free_Number_Called__c = Toll_Free_Number_Called,\n\t\tCall_Time__c = Time_of_Call,\n\t\tCall_Date__c = Date_of_Call,\n\t\tCall_Disposition__c = Call_Disposition,\n\t\tPlan_Effective_Date__c = Plan_Effective_Date\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit1@Insert derive(Birthdate = toTimestamp(Birthdate, 'yyyyMMdd'),\n\t\tGender = iif(Gender==\"M\",\"Male\",iif(Gender==\"F\",\"Female\",iif(Gender==\"U\",\"Undeclared\",''))),\n\t\tHasOptedOutOfEmail__c = iif(upper(Email_Opt_Out)=='Y','true','false'),\n\t\tDo_Not_Call = iif(upper(Do_Not_Call)=='Y','true','false')) ~> DerivedColumn1\nsource1 derive(ADFId__c = uuid()) ~> ADFId\nADFId split(isNull(Lead_ID)||isNull(Promotion_ID)||isNull(First_Name)||isNull(Last_Name)||isNull(Gender)||isNull(Birthdate)||isNull(Address_1)||isNull(State)||isNull(Zip)||isNull(Phone)||isNull(Email_Address),\n\tdisjoint: false) ~> ConditionalSplit1@(Reject, Insert)\nConditionalSplit1@Reject derive(REJECT_REASON = concat('ADF:Field contain NULL value: ', iif(isNull(Lead_ID), '{Lead ID} ', ''), iif(isNull(Promotion_ID), '{Event ID} ', ''), iif(isNull(First_Name), '{First Name} ', ''), iif(isNull(Last_Name), '{Last Name} ', ''), iif(isNull(Gender), 'Gender ', ''), iif(isNull(Birthdate), 'Birthdate ', ''), iif(isNull(Address_1), '{Address 1} ', ''), iif(isNull(City), 'City ', ''), iif(isNull(State), 'State ', ''), iif(isNull(Zip), 'Zip ', ''), iif(isNull(Phone), 'Phone ', ''), iif(isNull(Email_Address), '{Email Address} ', ''))) ~> rejectReason\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nJoin1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_mscc_referral_Staging_Inbound_Campaign__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toInsert\nADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_mscc_referral_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_mscc_referral_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toReject"
+		}
+	}
+}

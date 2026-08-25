@@ -1,0 +1,64 @@
+{
+	"name": "ib_kpma_ship_conf",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "toUpsert"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "RejectOutput"
+				}
+			],
+			"transformations": [
+				{
+					"name": "addADFId"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectReason"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\tCONTACT_ID as string,\n\t\tTRAN_ID as string,\n\t\tSHIP_DATE as string,\n\t\tERROR as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_ship_conf_*']) ~> source1\nsource1 derive(ADFId__c = uuid()) ~> addADFId\nConditionalSplit1@toUpsert derive(Status_TS__c = coalesce(toString(toDate(SHIP_DATE, 'yyyyMMdd')), SHIP_DATE),\n\t\tStatus__c = case(isNull(SHIP_DATE)&&not(isNull(ERROR)), 'Error', not(isNull(SHIP_DATE)), 'Shipped')) ~> DerivedColumn2\nDerivedColumn2 select(mapColumn(\n\t\tADFId__c,\n\t\tContact__c = CONTACT_ID,\n\t\tId = TRAN_ID,\n\t\tStatus_TS__c,\n\t\tStatus__c,\n\t\tError_Message__c = ERROR\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\naddADFId split(isNull(CONTACT_ID)||isNull(TRAN_ID) || (isNull(SHIP_DATE) && isNull(ERROR)),\n\tdisjoint: false) ~> ConditionalSplit1@(toReject, toUpsert)\nConditionalSplit1@toReject derive(REJECT_REASON = concat('ADF:Field contain NULL value: ', iif(isNull(CONTACT_ID), 'CONTACT_ID ', ''), iif(isNull(TRAN_ID), 'TRAN_ID ', ''), iif((isNull(SHIP_DATE) && isNull(ERROR)), 'SHIP_DATE & ERROR', ''))) ~> rejectReason\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_ship_conf_Fulfillment_Orders__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toUpsert\naddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_ship_conf_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_ship_conf_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> RejectOutput"
+		}
+	}
+}

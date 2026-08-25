@@ -1,0 +1,64 @@
+{
+	"name": "ib_kpma_contactnote",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedInbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "rejectOUTPUT"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertNotes"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectREASON"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "DerivedColumn4"
+				},
+				{
+					"name": "Select4"
+				}
+			],
+			"script": "source(output(\n\t\tCONTACT_ID as string,\n\t\tNOTES as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_contactnote*']) ~> source1\nsource1 derive(ADFId__c = uuid()) ~> DerivedColumn1\nDerivedColumn1 split(isNull(CONTACT_ID)||isNull(NOTES),\n\tdisjoint: false) ~> ConditionalSplit1@(rejectNULL, toSFDC)\nConditionalSplit1@rejectNULL derive(REJECT_REASON = iif(isNull(CONTACT_ID)||isNull(NOTES), \r\nconcat('ADF:Field contain NULL value: ', iif(isNull(CONTACT_ID), 'CONTACT_ID ', ''), iif(isNull(NOTES), 'NOTES ', '')), toString(null()))) ~> rejectREASON\nrejectREASON select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit1@toSFDC derive(Notes_Type__c = case(startsWith(CONTACT_ID, '003'), 'Member', startsWith(CONTACT_ID, '00Q'), 'Medicare'),\n\t\tName = concat(toString(currentUTC(), 'MM/dd/yyyy:HH:mm'), case(startsWith(CONTACT_ID, '003'), '_Member', startsWith(CONTACT_ID, '00Q'), '_Medicare')),\n\t\tSObject_Name__c = case(startsWith(CONTACT_ID, '003'), 'Contact', startsWith(CONTACT_ID, '00Q'), 'Lead'),\n\t\tContact__c = case(startsWith(CONTACT_ID, '003'), CONTACT_ID),\n\t\tLead__c = case(startsWith(CONTACT_ID, '00Q'), CONTACT_ID)) ~> DerivedColumn4\nDerivedColumn4 select(mapColumn(\n\t\tADFId__c,\n\t\tNotes__c = NOTES,\n\t\tNotes_Type__c,\n\t\tSObject_Name__c,\n\t\tContact__c,\n\t\tLead__c,\n\t\tName\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select4\nDerivedColumn1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_contactnote_raw.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedInbound\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_contactnote_source_reject.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> rejectOUTPUT\nSelect4 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_contactnote_Notes__c.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertNotes"
+		}
+	}
+}

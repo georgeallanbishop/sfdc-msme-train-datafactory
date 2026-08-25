@@ -1,0 +1,32 @@
+{
+	"name": "Salesforce2",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Salesforce",
+		"typeProperties": {
+			"environmentUrl": "https://login.salesforce.com",
+			"username": "karedataexchange@teletechinc.onmicrosoft.com.kpprod",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "salesforce-password"
+			},
+			"securityToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "salesforce-token-prod"
+			}
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

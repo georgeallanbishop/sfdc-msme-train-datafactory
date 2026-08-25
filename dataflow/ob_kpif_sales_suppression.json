@@ -1,0 +1,38 @@
+{
+	"name": "ob_kpif_sales_suppression",
+	"properties": {
+		"folder": {
+			"name": "export"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "export_files",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				}
+			],
+			"script": "source(output(\n\t\tId as string,\n\t\tCustomer_Id__c as string,\n\t\tSalutation as string,\n\t\tFirstName as string,\n\t\tmiddle_initial__c as string,\n\t\tLastName as string,\n\t\tOtherStreet as string,\n\t\tOtherCity as string,\n\t\tOtherState as string,\n\t\tOtherPostalCode as string,\n\t\tPhone as string,\n\t\tEmail as string,\n\t\tDeceased__c as string,\n\t\tDo_Not_Mail__c as string,\n\t\tHasOptedOutOfEmail as string,\n\t\tDoNotCall as string,\n\t\tDo_Not_Solicit__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['salesforce/ob_kpif_sales_suppression*']) ~> source1\nsource1 derive(ADDRESS_LINE_1 = rtrim(ltrim(toString(slice(split(OtherStreet, '\\n'), 1, 1)), '[\"'), '\"]'),\n\t\tADDRESS_LINE_2 = rtrim(ltrim(toString(slice(split(OtherStreet, '\\n'), 2, 2)), '[\"'), '\"]')) ~> DerivedColumn1\nDerivedColumn1 select(mapColumn(\n\t\tCONTACT_ID = Id,\n\t\tCUSTOMER_ID = Customer_Id__c,\n\t\tNAME_PREFIX = Salutation,\n\t\tFIRST_NAME = FirstName,\n\t\tMIDDILE_INITIAL = middle_initial__c,\n\t\t{ LAST_NAME} = LastName,\n\t\tADDRESS_LINE_1,\n\t\tADDRESS_LINE_2,\n\t\tCITY = OtherCity,\n\t\tSTATE = OtherState,\n\t\tZIP = OtherPostalCode,\n\t\tPHONE = Phone,\n\t\tEMAIL_ADDRESS = Email,\n\t\tDECEASED = Deceased__c,\n\t\tDo_Not_Mail = Do_Not_Mail__c,\n\t\tDo_Not_Email = HasOptedOutOfEmail,\n\t\tDo_Not_Call = DoNotCall,\n\t\tDo_Not_Solicit = Do_Not_Solicit__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('ob_kpif_sales_suppression_', toString(currentUTC(), 'yyyyMMdd_HHmmss'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink1"
+		}
+	}
+}

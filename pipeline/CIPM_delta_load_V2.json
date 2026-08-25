@@ -1,0 +1,443 @@
+{
+	"name": "CIPM_delta_load_V2",
+	"properties": {
+		"description": "connection to cisco hds",
+		"activities": [
+			{
+				"name": "DeltaLoadMetadataTable",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "v2_cipm*"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata_comma_V2",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "deltaLoadForEachTable",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "DeltaLoadMetadataTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('DeltaLoadMetadataTable').output.value",
+						"type": "Expression"
+					},
+					"batchCount": 6,
+					"activities": [
+						{
+							"name": "delta_copy",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "delta_query",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SalesforceV2Source",
+									"additionalColumns": [
+										{
+											"name": "kare_mod_date",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
+										}
+									],
+									"SOQLQuery": {
+										"value": "@replace(replace(replace(replace(string(activity('delta_query').output.value[0]),'\"col\":',''),'\"',''),'{',''),'}','')",
+										"type": "Expression"
+									},
+									"includeDeletedObjects": false
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"parallelCopies": 10,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "salesforce_object",
+									"type": "DatasetReference",
+									"parameters": {
+										"object": "Contact"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "CIPM_Source_V2",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": {
+											"value": "@replace(concat(item().object_name, '.snappy.parquet'),'`','')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "delta_variable",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "delta_copy",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "file_info",
+								"value": {
+									"value": "@replace(concat(item().object_name,'|',item().watermark_column_name,'|',activity('delta_copy').output.dataRead,'|',activity('delta_copy').output.dataWritten,'|',activity('delta_copy').output.rowsRead,'|',activity('delta_copy').output.rowsCopied,'|','','|',activity('delta_copy').output.executionDetails[0].status,'|',activity('delta_copy').output.executionDetails[0].start,'|',activity('delta_copy').output.executionDetails[0].duration,'|','cisco-',item().object_name,'-',replace(replace(pipeline().parameters.windowStart,'-',''),':',''),'-to-',replace(replace(pipeline().parameters.windowEnd,'-',''),':',''),'.snappy.parquet','|',item().load_table,'|',item().delta_transaction_category),'`','')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "delta_query",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": "query_files_prod",
+										"wildcardFileName": {
+											"value": "@replace(item().object_name, '`', '')",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"dataset": {
+									"referenceName": "metadata_comma_V2",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "updateDeltaTables",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "deltaLoadForEachTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/Export/Update Delta Tables_V2",
+					"baseParameters": {
+						"AzurePipeLineLog": {
+							"value": "@string(variables('file_info'))",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@toLower(pipeline().globalParameters.lic_env)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "exportCIMPdata",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "updateDeltaTables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/Export/Consumer Connect Export-Incremental",
+					"baseParameters": {
+						"env": {
+							"value": "@pipeline().globalParameters.lic_env",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_photon",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "UpdateMaxDate",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Upload2SFTP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/Export/CIMP_max_date_update"
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Upload2SFTP",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "exportCIMPdata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "CIMP_export_files",
+							"wildcardFileName": {
+								"value": "@activity('exportCIMPdata').output.runOutput",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "SftpWriteSettings",
+							"operationTimeout": "01:00:00",
+							"useTempFileRename": true
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "export_files",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "sftp_outbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"env": {
+								"value": "@pipeline().globalParameters.env",
+								"type": "Expression"
+							},
+							"folder": "epsilon/outbound",
+							"filename": {
+								"value": "@concat(formatDateTime(pipeline().TriggerTime, 'yyyyMMdd'),'.consumerconnect.customer.di')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "EmailAlert_ExportFail",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "exportCIMPdata",
+						"dependencyConditions": [
+							"Failed",
+							"Skipped"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+					"connectVia": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> CIMP daily file export has failed. Please check MSMSE ', pipeline().globalParameters.env, ' for pipeline run details ','.<br /><br />Thanks<br />Mani</p></body>'),'\",\"EmailTo\":\"',pipeline().parameters.emails,'\",\"Subject\":\"','CIMP Export process failed','\"}')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"windowStart": {
+				"type": "string",
+				"defaultValue": "2016-01-01T23:00:00Z"
+			},
+			"windowEnd": {
+				"type": "string",
+				"defaultValue": "2021-04-27T23:00:00Z"
+			},
+			"emails": {
+				"type": "string",
+				"defaultValue": "george.bishop@ttecdigital.com,vivek.natan@ttecdigital.com,smit.patil@ttecdigital.com,praveen.kavali@ttecdigital.com,durga.jakka@ttecdigital.com,astha.saluja@ttecdigital.com,pawan.dixit@ttecdigital.com,priyank.dsilva@ttecdigital.com,purvesh.jain@ttecdigital.com,siva.kv@ttecdigital.com"
+			}
+		},
+		"variables": {
+			"file_info": {
+				"type": "Array"
+			},
+			"run_datetime_suffix": {
+				"type": "String"
+			},
+			"run_datetime": {
+				"type": "String"
+			},
+			"fileInfodisplay": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "export"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

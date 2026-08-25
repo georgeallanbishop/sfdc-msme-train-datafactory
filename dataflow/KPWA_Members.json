@@ -1,0 +1,74 @@
+{
+	"name": "KPWA_Members",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "RecordTypeId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insert"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "toReject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "AddADFId"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectResaon"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\t{MEDICAL RECORD NUMBER} as string,\n\t\tREGION as string,\n\t\t{SUBSCRIBER CONTACT ID} as string,\n\t\tEVENT as string,\n\t\t{EVENT DATE} as string,\n\t\t{EVENT SOURCE} as string,\n\t\t{ELIGIBILITY EFFECTIVE DATE} as string,\n\t\tSALUTATION as string,\n\t\t{FIRST NAME} as string,\n\t\t{MIDDLE NAME} as string,\n\t\t{LAST NAME} as string,\n\t\tSUFFIX as string,\n\t\tGENDER as string,\n\t\tBIRTHDATE as string,\n\t\t{WORK PHONE} as string,\n\t\t{HOME PHONE} as string,\n\t\t{MOBILE PHONE} as string,\n\t\tEMAIL as string,\n\t\tDECEASED as string,\n\t\t{ENROLLMENT DATE} as string,\n\t\t{CONTACT STATUS} as string,\n\t\t{TERMINATED MEMBER INDICATOR} as string,\n\t\tROLE as string,\n\t\t{DO NOT MAIL} as string,\n\t\t{DO NOT CALL} as string,\n\t\t{EMAIL OPT OUT} as string,\n\t\t{DO NOT CONTACT} as string,\n\t\tMARRIED as string,\n\t\tETHNICITY as string,\n\t\t{BAD PHONE INDICATOR} as string,\n\t\t{PREFERRED SPOKEN LANGUAGE} as string,\n\t\t{PRIMARY CARE PHYSICIAN} as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/MBRP*']) ~> source1\nsource(output(\n\t\tRecordTypeId as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/kpwa_members_record_type_id.csv']) ~> RecordTypeId\nSelect1, RecordTypeId join(1 == 1,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> Join1\nDerivedColumn1 select(mapColumn(\n\t\tADFId__c,\n\t\tMedical_record_number__c = {MEDICAL RECORD NUMBER},\n\t\tRegion__c = REGION,\n\t\tSubscriber_contact_id__c = {SUBSCRIBER CONTACT ID},\n\t\tEvent__c = EVENT,\n\t\tEvent_Date__c,\n\t\tEvent_Source__c = {EVENT SOURCE},\n\t\tEligibility_Effective_Date__c,\n\t\tSalutation__c = SALUTATION,\n\t\tFirst_Name__c = {FIRST NAME},\n\t\tMiddle_Name__c = {MIDDLE NAME},\n\t\tLast_Name__c = {LAST NAME},\n\t\tSuffix__c = SUFFIX,\n\t\tGender__c,\n\t\tBirthdate__c,\n\t\tWork_Phone__c = {WORK PHONE},\n\t\tHome_Phone__c = {HOME PHONE},\n\t\tMobile_Phone__c = {MOBILE PHONE},\n\t\tEmail__c = EMAIL,\n\t\tDeceased__c = DECEASED,\n\t\tEnrollment_Date__c,\n\t\tContact_Status__c = {CONTACT STATUS},\n\t\tTerminated_Member_Indicator__c = {TERMINATED MEMBER INDICATOR},\n\t\tRole__c = ROLE,\n\t\tDo_Not_Mail__c,\n\t\tDo_Not_Call__c,\n\t\tHasOptedOutOfEmail__c,\n\t\tDo_Not_Contact__c,\n\t\tMarried__c,\n\t\tEthnicity__c = ETHNICITY,\n\t\tBad_Phone_Indicator__c,\n\t\tPreferred_Spoken_Language__c = {PREFERRED SPOKEN LANGUAGE},\n\t\tPrimary_Care_Physician__c = {PRIMARY CARE PHYSICIAN}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit1@toInsert derive(Birthdate__c = toTimestamp(BIRTHDATE, 'yyyyMMdd'),\n\t\tGender__c = iif(GENDER==\"M\",\"Male\",\"Female\"),\n\t\tHasOptedOutOfEmail__c = toBoolean({EMAIL OPT OUT}),\n\t\tEligibility_Effective_Date__c = toDate({ELIGIBILITY EFFECTIVE DATE}, 'yyyyMMdd'),\n\t\tEnrollment_Date__c = toDate({ENROLLMENT DATE}, 'yyyyMMdd'),\n\t\tEvent_Date__c = toDate({EVENT DATE}, 'yyyyMMdd'),\n\t\tBad_Phone_Indicator__c = toBoolean({BAD PHONE INDICATOR}),\n\t\tDo_Not_Call__c = toBoolean({DO NOT CALL}),\n\t\tDo_Not_Contact__c = toBoolean({DO NOT CONTACT}),\n\t\tDo_Not_Mail__c = toBoolean({DO NOT MAIL}),\n\t\tMarried__c = toBoolean(MARRIED)) ~> DerivedColumn1\nsource1 derive(ADFId__c = uuid()) ~> AddADFId\nAddADFId split(isNull({MEDICAL RECORD NUMBER})||isNull({SUBSCRIBER CONTACT ID})||isNull({ELIGIBILITY EFFECTIVE DATE})||isNull({FIRST NAME})||isNull({LAST NAME})||isNull(GENDER)||isNull(BIRTHDATE)||isNull({HOME PHONE})||isNull({CONTACT STATUS})||isNull(ROLE),\n\tdisjoint: false) ~> ConditionalSplit1@(toReject, toInsert)\nConditionalSplit1@toReject derive(REJECT_REASON = iif(isNull({MEDICAL RECORD NUMBER})||isNull({SUBSCRIBER CONTACT ID})||isNull({ELIGIBILITY EFFECTIVE DATE})||isNull({FIRST NAME})||isNull({LAST NAME})||isNull(GENDER)||isNull(BIRTHDATE)||isNull({HOME PHONE})||isNull({CONTACT STATUS})||isNull(ROLE), \r\nconcat('ADF:Field contain NULL value: ', iif(isNull({MEDICAL RECORD NUMBER}), '{MEDICAL RECORD NUMBER} ', ''),iif(isNull({SUBSCRIBER CONTACT ID}), '{SUBSCRIBER CONTACT ID} ', ''),iif(isNull({ELIGIBILITY EFFECTIVE DATE}), '{ELIGIBILITY EFFECTIVE DATE} ', ''),iif(isNull({FIRST NAME}), '{FIRST NAME} ', ''),iif(isNull({LAST NAME}), '{LAST NAME} ', ''),iif(isNull(GENDER), 'GENDER ', ''),iif(isNull(BIRTHDATE), 'BIRTHDATE ', ''),iif(isNull({HOME PHONE}), '{HOME PHONE} ', ''),iif(isNull({CONTACT STATUS}), '{CONTACT STATUS} ', ''),iif(isNull(ROLE), 'ROLE ', '')), '')) ~> rejectResaon\nrejectResaon select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nJoin1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['KPWA_Members_Staging_Inbound_Campaign__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insert\nAddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['KPWA_Members_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['KPWA_Members_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toReject"
+		}
+	}
+}

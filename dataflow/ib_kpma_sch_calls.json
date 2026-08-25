@@ -1,0 +1,93 @@
+{
+	"name": "ib_kpma_sch_calls",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "groupID"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "RecordTypeId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "intermOUTPUT"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "rejectOUTPUT"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertS"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "rejectREASON"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Join2"
+				},
+				{
+					"name": "ConditionalSplit2"
+				},
+				{
+					"name": "Select3"
+				},
+				{
+					"name": "Union1"
+				}
+			],
+			"script": "source(output(\n\t\tAction as string,\n\t\t{Contact ID} as string,\n\t\t{Sched call Start date} as string,\n\t\t{Sched call Start Time} as string,\n\t\t{Promo ID} as string,\n\t\t{Call Reason} as string,\n\t\t{Account ID} as string,\n\t\t{Sched call ID} as string,\n\t\t{Sched call End date} as string,\n\t\t{Sched call End Time} as string,\n\t\tLanguage as string,\n\t\tRecordType as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_sch_calls*']) ~> source1\nsource(output(\n\t\tId as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/sch_calls_group_id.csv']) ~> groupID\nsource(output(\n\t\tRecordTypeId as string,\n\t\tName as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/sch_calls_type_id.csv']) ~> RecordTypeId\nsource1 derive(ADFId__c = uuid()) ~> DerivedColumn1\nDerivedColumn1 split(isNull(Action)||not(in(['S', 'C'], upper(Action)))||isNull({Contact ID})||(isNull({Sched call Start date})&&(upper(Action)=='S'))||(isNull({Promo ID})&&(upper(Action)=='S'))||isNull({Call Reason})||(isNull({Sched call End date})&&(upper(Action)=='S'))||isNull({Sched call ID})&&(upper(Action) == 'C'),\n\tdisjoint: false) ~> ConditionalSplit1@(rejectCONDITION, toSFDC)\nJoin2 derive({Sched call Start date} = coalesce(toString(toDate({Sched call Start date}, 'yyyyMMdd')), {Sched call Start date}),\n\t\t{Sched call End date} = coalesce(toString(toDate({Sched call End date}, 'yyyyMMdd')), {Sched call End date}),\n\t\t{Account ID} = case(isNull({Account ID}), Id, {Account ID})) ~> DerivedColumn2\nConditionalSplit2@splitContact select(mapColumn(\n\t\tADFId__c,\n\t\tProcess_Status__c = Action,\n\t\tContact__c = {Contact ID},\n\t\tCall_date__C = {Sched call Start date},\n\t\tStart_Time__c = {Sched call Start Time},\n\t\tPromo_ID__c = {Promo ID},\n\t\tDescription__c = {Call Reason},\n\t\tSched_call_ID__c = {Sched call ID},\n\t\tCall_End_date__c = {Sched call End date},\n\t\tEnd_Time__c = {Sched call End Time}\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select1\nConditionalSplit1@rejectCONDITION derive(REJECT_REASON = concat(iif(not(in(['S', 'C'], upper(Action))),\r\n           concat('ADF:INVALID Action. Expected ACTION_CODE = S or C. Received Action = \"', iif(isNull(Action), 'NULL', Action), '\"'), \r\n           ''),\r\n        iif(isNull(Action)||isNull({Contact ID})||isNull({Call Reason})||isNull(Language), \r\n           concat('ADF:REQUIRED FIELD MISSING: ', iif(isNull(Action), 'Action ', ''), iif(isNull({Contact ID}), '{Contact ID} ', ''), iif(isNull({Call Reason}), '{Call Reason} ', '')), \r\n           ''), \r\n        iif((isNull({Sched call Start date})&&(upper(Action)=='S'))||(isNull({Sched call Start Time})&&(upper(Action)=='S'))||(isNull({Promo ID})&&(upper(Action)=='S'))||(isNull({Sched call End date})&&(upper(Action)=='S'))||(isNull({Sched call End Time})&&(upper(Action)=='S'))||(isNull(RecordType)&&(upper(Action) == 'S')),\r\n           concat('ADF:REQUIRED FIELD MISSING FOR ACTION_CODE S: ', iif(isNull({Sched call Start date}), '{Sched call Start date} ', ''), iif(isNull({Promo ID}), '{Promo ID}', ''), iif(isNull({Sched call End date}), '{Sched call End date} ', ''), iif(isNull(RecordType), 'RecordType', '')),\r\n           ''),\r\n        iif(isNull({Sched call ID})&&(upper(Action) == 'C'), 'ADF:Required Field Missing: {Sched call ID}', ''))) ~> rejectREASON\nrejectREASON select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nConditionalSplit1@toSFDC, groupID join(1 == 1,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> Join1\nJoin1, RecordTypeId join(RecordType == Name,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> Join2\nDerivedColumn2 split(startsWith({Contact ID}, '003'),\n\tstartsWith({Contact ID}, '00Q'),\n\tdisjoint: false) ~> ConditionalSplit2@(splitContact, splitLead)\nConditionalSplit2@splitLead select(mapColumn(\n\t\tADFId__c,\n\t\tProcess_Status__c = Action,\n\t\tLead_ID__c = {Contact ID},\n\t\tCall_date__C = {Sched call Start date},\n\t\tStart_Time__c = {Sched call Start Time},\n\t\tPromo_ID__c = {Promo ID},\n\t\tDescription__c = {Call Reason},\n\t\tSched_call_ID__c = {Sched call ID},\n\t\tCall_End_date__c = {Sched call End date},\n\t\tEnd_Time__c = {Sched call End Time}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select3\nSelect1, Select3 union(byName: true)~> Union1\nDerivedColumn1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_sch_calls_raw.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> intermOUTPUT\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_sch_calls_source_reject.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> rejectOUTPUT\nUnion1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_sch_calls_Staging_Inbound_Campaign__c.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertS"
+		}
+	}
+}

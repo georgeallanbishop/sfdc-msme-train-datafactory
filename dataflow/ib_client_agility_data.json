@@ -1,0 +1,61 @@
+{
+	"name": "ib_client_agility_data",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "Upsert"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedInbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "Reject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "addADFId"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "rejectReason"
+				}
+			],
+			"script": "source(output(\n\t\tCONTACT_ID as string,\n\t\tMAG_INDIV_ID as string,\n\t\tDIGITAL_ID as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_client_agility_data_*']) ~> source1\nConditionalSplit1@toUpsert select(mapColumn(\n\t\tADFId__c,\n\t\tId = CONTACT_ID,\n\t\tCustomer_Id__c = MAG_INDIV_ID,\n\t\tDigital_ID__c = DIGITAL_ID\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nsource1 derive(ADFId__c = uuid()) ~> addADFId\naddADFId split(isNull(CONTACT_ID) || (isNull(DIGITAL_ID) && isNull(MAG_INDIV_ID)),\n\tdisjoint: false) ~> ConditionalSplit1@(toReject, toUpsert)\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nConditionalSplit1@toReject derive(REJECT_REASON = concat('ADF:Required Field Contains NULL Value: ', iif(isNull(CONTACT_ID), 'CONTACT_ID ', ''), iif(isNull(DIGITAL_ID) && isNull(MAG_INDIV_ID), 'MAG_INDIV_ID AND Digital ID', ''))) ~> rejectReason\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_client_agility_data_Contact.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> Upsert\naddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_client_agility_data_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedInbound\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_client_agility_data_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> Reject"
+		}
+	}
+}

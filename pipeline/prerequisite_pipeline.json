@@ -1,0 +1,881 @@
+{
+	"name": "prerequisite_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "LeadRecordTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where SobjectType = 'Lead' and Name = 'Medicare'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "lead_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "MeetingRecordTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id, Name from RecordType where SobjectType = 'Meeting__c'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Name",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "Record Type Name",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "meeting_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "MedReferralRecordTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where Name = 'Medicaid Referral'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "med_referral_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "MSCCReferralRecordTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where Name = 'MSCC Referral'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "mscc_referral_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "OppRecordTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where SobjectType = 'Opportunity' and Name = 'KPMAI'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "opp_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "ScheduleCallGroupId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from Group where Type = 'Queue' and Name = 'KPMA Schedule Calls'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Group"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "sch_calls_group_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "ScheduleCallRecordTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id, Name from RecordType where SobjectType = 'Call_Directive__c'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "Name",
+									"type": "String",
+									"physicalType": "string"
+								},
+								"sink": {
+									"name": "Name",
+									"type": "String",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "sch_calls_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "IndKPAOLLeadsTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where Name = 'Incomplete Application' and SobjectType = 'Staging_Inbound_Campaign__c'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "ind_kpaol_leads_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "SepCandidateTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where Name = 'SEP Candidates Call'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "sep_candidate_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "KPWAMemberTypeId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where Name = 'KPWA Suppression Load'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "RecordTypeId",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "kpwa_members_record_type_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "DummyFile",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "dummy*",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "inbound_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "dummy.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "CallDirectiveRecordType",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": "select Id from RecordType where Name = 'Incomplete Application' and SobjectType = 'Staging_Inbound_Campaign__c'",
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "id"
+								},
+								"sink": {
+									"name": "Id",
+									"type": "String",
+									"physicalType": "String"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "RecordType"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "inbound_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "call_directive_record_type_id.csv"
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:43Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

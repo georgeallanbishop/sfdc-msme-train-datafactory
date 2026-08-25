@@ -1,0 +1,64 @@
+{
+	"name": "ib_kpma_fulfillment",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertFulfillmentOrder"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "toReject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "addADFId1"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectReason"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\tCONTACT_ID as string,\n\t\tOPPORTUNITY_ID as string,\n\t\tKPIT_REQUEST_DT as string,\n\t\tINVENTORY_ID as string,\n\t\tMAIL_ADDR1 as string,\n\t\tMAIL_ADDR2 as string,\n\t\tMAIL_CITY as string,\n\t\tMAIL_STATE as string,\n\t\tMAIL_ZIP as string,\n\t\tMAIL_ZIP4 as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_fulfillment*']) ~> source1\nConditionalSplit1@Upsert derive(Mailing_Street__c = concatWS(' ',MAIL_ADDR1,MAIL_ADDR2),\n\t\tMailing_Postal_Code__c = concatWS('-', MAIL_ZIP, MAIL_ZIP4),\n\t\tRequest_Date__c = coalesce(toString(toDate(KPIT_REQUEST_DT,'yyyyMMdd')),KPIT_REQUEST_DT),\n\t\t{Shipment_Speed__c } = \"Fulfillment House\",\n\t\tStatus__c = \"Pending\") ~> DerivedColumn1\nDerivedColumn1 select(mapColumn(\n\t\tADFId__c,\n\t\tContact__c = CONTACT_ID,\n\t\tOpportunity__c = OPPORTUNITY_ID,\n\t\tRequest_Date__c,\n\t\tMailing_Street__c,\n\t\tMailing_City__c = MAIL_CITY,\n\t\tMailing_State__c = MAIL_STATE,\n\t\tMailing_Postal_Code__c,\n\t\tShipment_Speed__c = {Shipment_Speed__c },\n\t\tStatus__c,\n\t\tOTN__c = INVENTORY_ID\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nsource1 derive(ADFId__c = uuid()) ~> addADFId1\naddADFId1 split(isNull(CONTACT_ID)||isNull(KPIT_REQUEST_DT)||isNull(INVENTORY_ID)||isNull(MAIL_ADDR1)||isNull(MAIL_CITY)||isNull(MAIL_STATE)||isNull(MAIL_ZIP),\n\tdisjoint: false) ~> ConditionalSplit1@(Reject, Upsert)\nConditionalSplit1@Reject derive(REJECT_REASON = concat('ADF:Required Field Contains NULL Value: ', iif(isNull(CONTACT_ID), 'CONTACT_ID ', ''), iif(isNull(KPIT_REQUEST_DT), 'KPIT_REQUEST_DT', ''), iif(isNull(INVENTORY_ID), 'INVENTORY_ID', ''), iif(isNull(MAIL_ADDR1), 'MAIL_ADDR1', ''), iif(isNull(MAIL_CITY), 'MAIL_CITY', ''), iif(isNull(MAIL_STATE), 'MAIL_STATE', ''), iif(isNull(MAIL_ZIP), 'MAIL_ZIP', ''))) ~> rejectReason\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_fulfillment_Fulfillment_Orders__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertFulfillmentOrder\naddADFId1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_fulfillment_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_fulfillment_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toReject"
+		}
+	}
+}

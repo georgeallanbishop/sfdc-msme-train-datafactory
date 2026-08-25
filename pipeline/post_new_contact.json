@@ -1,0 +1,343 @@
+{
+	"name": "post_new_contact",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetContactIdMap",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": {
+							"value": "@concat('SELECT Id, ADFID__c FROM Contact WHERE LastModifiedDate > ', pipeline().parameters.last_modified_time)",
+							"type": "Expression"
+						},
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ""
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Contact"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "notes_Contact_Id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "GetLeadIdMap",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": {
+							"value": "@concat('SELECT Id, ADFID__c FROM Lead WHERE LastModifiedDate > ', pipeline().parameters.last_modified_time)",
+							"type": "Expression"
+						},
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ""
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Lead"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "notes_Lead_Id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "notes_new_contact",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "GetContactIdMap",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetLeadIdMap",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "notes_new_contact",
+						"type": "DataFlowReference"
+					},
+					"integrationRuntime": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "InsertContactNotes",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "notes_new_contact",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "insert_to_sfdc",
+							"wildcardFileName": "new_contact_Contact_Notes__c.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SalesforceV2Sink",
+						"writeBatchSize": 100000,
+						"writeBehavior": "insert"
+					},
+					"enableStaging": false,
+					"enableSkipIncompatibleRow": true,
+					"logSettings": {
+						"enableCopyActivityLog": true,
+						"copyActivityLogSettings": {
+							"logLevel": "Info",
+							"enableReliableLogging": true
+						},
+						"logLocationSettings": {
+							"linkedServiceName": {
+								"referenceName": "SFDC_storage_gen2",
+								"type": "LinkedServiceReference"
+							},
+							"path": "auditlogs/error_log/insert_contact_notes_new_contact"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Notes__c"
+						}
+					}
+				]
+			},
+			{
+				"name": "InsertLeadNotes",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "notes_new_contact",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "insert_to_sfdc",
+							"wildcardFileName": "new_contact_Lead_Notes__c.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SalesforceV2Sink",
+						"writeBatchSize": 100000,
+						"writeBehavior": "insert"
+					},
+					"enableStaging": false,
+					"enableSkipIncompatibleRow": true,
+					"logSettings": {
+						"enableCopyActivityLog": true,
+						"copyActivityLogSettings": {
+							"logLevel": "Info",
+							"enableReliableLogging": true
+						},
+						"logLocationSettings": {
+							"linkedServiceName": {
+								"referenceName": "SFDC_storage_gen2",
+								"type": "LinkedServiceReference"
+							},
+							"path": "auditlogs/error_log/insert_lead_notes_new_contact"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Notes__c"
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"uploaded_files": {
+				"type": "array"
+			},
+			"last_modified_time": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"log_content": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

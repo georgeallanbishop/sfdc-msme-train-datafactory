@@ -1,0 +1,75 @@
+{
+	"name": "notes_role",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesContactId"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesLead"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesLeadId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertContactNotes"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertLeadNotes"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Join2"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "DerivedColumn2"
+				}
+			],
+			"script": "source(output(\n\t\tADFId__c as string,\n\t\tNotes__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/notes_Contact.csv']) ~> notesContact\nsource(output(\n\t\tId as string,\n\t\tADFId__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/notes_Contact_Id.csv']) ~> notesContactId\nsource(output(\n\t\tADFId__c as string,\n\t\tNotes__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/notes_Lead.csv']) ~> notesLead\nsource(output(\n\t\tId as string,\n\t\tADFId__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/notes_Lead_Id.csv']) ~> notesLeadId\nDerivedColumn1, notesContactId join(notesContact@ADFId__c == notesContactId@ADFId__c,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join1\nJoin1 select(mapColumn(\n\t\tNotes__c,\n\t\tContact__c = Id,\n\t\tNotes_Type__c,\n\t\tSObject_Name__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nDerivedColumn2, notesLeadId join(notesLead@ADFId__c == notesLeadId@ADFId__c,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join2\nJoin2 select(mapColumn(\n\t\tNotes__c,\n\t\tLead__c = Id,\n\t\tNotes_Type__c,\n\t\tSObject_Name__c\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select2\nnotesContact derive(Notes_Type__c = 'Contact',\n\t\tSObject_Name__c = concat(toString(currentUTC(), 'MM/dd/yyyy:HH:mm'), '_Member')) ~> DerivedColumn1\nnotesLead derive(Notes_Type__c = 'Lead',\n\t\tSObject_Name__c = concat(toString(currentUTC(), 'MM/dd/yyyy:HH:mm'), '_Medicare')) ~> DerivedColumn2\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['notes_Contact.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertContactNotes\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['notes_Lead.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertLeadNotes"
+		}
+	}
+}

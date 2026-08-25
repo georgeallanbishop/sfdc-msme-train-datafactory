@@ -1,0 +1,45 @@
+{
+	"name": "email_alerts_backup",
+	"properties": {
+		"activities": [
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "[\"1\",\"2\"]",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "EmailAlert_FileNotExist",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"url": "https://prod-126.westus.logic.azure.com:443/workflows/f2a09fd316f4401296799db629e70605/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=wIrVgAP27ukJSLNeqps1E74OJxAj3yZFy-EY8zkmsPQ",
+								"body": {
+									"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', item().FileNamePrefix, '</b> file has not been received on ',substring(string(convertFromUtc(utcnow(),'Pacific Standard Time')),0,10),'.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"',string(item().EmailAlertsTo),'\",\"Subject\":\"',concat(item().FileNamePrefix, ' files missing today'),'\"}')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:36Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

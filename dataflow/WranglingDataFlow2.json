@@ -1,0 +1,19 @@
+{
+	"name": "WranglingDataFlow2",
+	"properties": {
+		"type": "WranglingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"name": "DelimitedText2",
+					"script": "source(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> DelimitedText2",
+					"dataset": {
+						"referenceName": "DelimitedText2",
+						"type": "DatasetReference"
+					}
+				}
+			],
+			"script": "section Section1;\r\nshared DelimitedText2 = let\r\n  AdfDoc = AzureStorage.BlobContents(\"https://gbsa.blob.core.windows.net/datafactory/0e15ec7e-5442-9a4c-8f40-b1dfe0195d89_0.txt\"),\r\n  Csv = Csv.Document(AdfDoc, [Delimiter = \",\", Encoding = TextEncoding.Utf8, QuoteStyle = QuoteStyle.Csv]),\r\n  PromotedHeaders = Table.PromoteHeaders(Csv, [PromoteAllScalars = true])\r\nin\r\n  PromotedHeaders;\r\nshared UserQuery = let\r\n  Source = DelimitedText2,\r\n  #\"Split column by delimiter\" = Table.SplitColumn(Source, \"OperationItem\", Splitter.SplitTextByDelimiter(\",\"), {\"Facility_UID\", \"Facility Name\", \"Venue Type\", \"Address1\", \"Address2\", \"City\", \"State\", \"Zip\", \"Zip+4\", \"Country\", \"Venue Phone\", \"Venue Notes\", \"Venue Capacity\"})\r\nin\r\n  #\"Split column by delimiter\";\r\n"
+		}
+	}
+}

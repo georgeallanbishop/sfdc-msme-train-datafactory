@@ -1,0 +1,175 @@
+{
+	"name": "delete_sftp_archive",
+	"properties": {
+		"activities": [
+			{
+				"name": "SetCutoffDate",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "cutoff_date",
+					"value": {
+						"value": "@adddays(startOfDay(pipeline().TriggerTime), -10)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ForFolder",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "SetCutoffDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.folders",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "DeleteInbound",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "sftp_inbound_archive",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().globalParameters.env",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								},
+								"logStorageSettings": {
+									"linkedServiceName": {
+										"referenceName": "SFDC_storage_gen2",
+										"type": "LinkedServiceReference"
+									},
+									"path": "auditlogs/delete_log"
+								},
+								"enableLogging": true,
+								"storeSettings": {
+									"type": "SftpReadSettings",
+									"recursive": true,
+									"modifiedDatetimeEnd": {
+										"value": "@variables('cutoff_date')",
+										"type": "Expression"
+									},
+									"wildcardFileName": {
+										"value": "*",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								}
+							}
+						},
+						{
+							"name": "DeleteOutbound",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "sftp_outbound_archive",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().globalParameters.env",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								},
+								"logStorageSettings": {
+									"linkedServiceName": {
+										"referenceName": "SFDC_storage_gen2",
+										"type": "LinkedServiceReference"
+									},
+									"path": "auditlogs/delete_log"
+								},
+								"enableLogging": true,
+								"storeSettings": {
+									"type": "SftpReadSettings",
+									"recursive": true,
+									"modifiedDatetimeEnd": {
+										"value": "@variables('cutoff_date')",
+										"type": "Expression"
+									},
+									"wildcardFileName": {
+										"value": "*",
+										"type": "Expression"
+									},
+									"enablePartitionDiscovery": false
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"folders": {
+				"type": "array",
+				"defaultValue": [
+					"kpma",
+					"kpif",
+					"epsilon",
+					"nedi",
+					"cde",
+					"welltok",
+					"veritas",
+					"sourceflow",
+					"kpwa",
+					"alms",
+					"medicaid",
+					"campaignfiles"
+				]
+			}
+		},
+		"variables": {
+			"cutoff_date": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

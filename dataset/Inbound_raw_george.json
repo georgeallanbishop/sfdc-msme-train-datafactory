@@ -1,0 +1,23 @@
+{
+	"name": "Inbound_raw_george",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "sfdcdataxchange",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "raw",
+				"container": "inbound"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

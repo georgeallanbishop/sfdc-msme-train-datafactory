@@ -1,0 +1,24 @@
+{
+	"name": "KP_Databricks",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-1119260484839992.12.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "kp-databricks"
+			},
+			"existingClusterId": "1202-140829-vexes490"
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

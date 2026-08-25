@@ -1,0 +1,27 @@
+{
+	"name": "SFTP_VERITAS_QA",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Sftp",
+		"typeProperties": {
+			"host": "sftpn3.rrd.com",
+			"port": 22,
+			"skipHostKeyValidation": true,
+			"authenticationType": "Basic",
+			"userName": "KaisrEnrl_VER001",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sftp-veritas"
+			}
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

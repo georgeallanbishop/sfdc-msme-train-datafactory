@@ -1,0 +1,221 @@
+{
+	"name": "export_transformation",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switch1",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.file_name",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "fulfillment_orders",
+							"activities": [
+								{
+									"name": "fulfillment_orders",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "fulfillment_orders",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ob_kpif_sales_suppression",
+							"activities": [
+								{
+									"name": "ob_kpif_sales_suppression",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ob_kpif_sales_suppression",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ob_kpma_enrollment",
+							"activities": [
+								{
+									"name": "ob_kpma_enrollment_extract",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ob_kpma_enrollment_extract",
+											"type": "DataFlowReference",
+											"parameters": {
+												"export_file_datetime": {
+													"value": "'@{pipeline().parameters.export_file_datetime}'",
+													"type": "Expression"
+												}
+											}
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ob_kpma_kpwaenrollment",
+							"activities": [
+								{
+									"name": "ob_kpwa_enrollment_extract",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ob_kpwa_enrollment_extract",
+											"type": "DataFlowReference",
+											"parameters": {
+												"export_file_datetime": {
+													"value": "'@{pipeline().parameters.export_file_datetime}'",
+													"type": "Expression"
+												}
+											}
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ob_kpma_meeting_venue_audit",
+							"activities": [
+								{
+									"name": "ob_kpma_meeting_venue_audit",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ob_kpma_meeting_venue_audit",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ob_kpma_seminar_update",
+							"activities": [
+								{
+									"name": "ob_kpma_seminar_update",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ob_kpma_seminar_update",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"file_name": {
+				"type": "string"
+			},
+			"export_file_datetime": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "export"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

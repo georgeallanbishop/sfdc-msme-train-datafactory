@@ -1,0 +1,64 @@
+{
+	"name": "ib_lead_update",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "IntremOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "RejectOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "MapLeadOutput"
+				}
+			],
+			"transformations": [
+				{
+					"name": "addADFId"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "RejectReason"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\tAGILITY_ID as string,\n\t\tCONTACT_ID as string,\n\t\tCNX_FAMILY_ID as string,\n\t\tHESTIA_PLAN_ID as string,\n\t\tEFFECTIVE_DATE as string,\n\t\tEVENT as string,\n\t\tEVENT_DATE as string,\n\t\tEVENT_SOURCE as string,\n\t\tEVENT_OUTCOME as string,\n\t\tFRST_NM as string,\n\t\tMID_INIT_TXT as string,\n\t\tLAST_NM as string,\n\t\tADDR_LN1_TXT as string,\n\t\tADDR_LN2_TXT as string,\n\t\tCITY_NM as string,\n\t\tST_CD as string,\n\t\tZIP_CD as string,\n\t\tZIP4_CD as string,\n\t\tHOME_PHN_NBR as string,\n\t\tBUSN_PHN_NBR as string,\n\t\tMOBL_PHN_NBR as string,\n\t\tFAX_NBR as string,\n\t\tEMAIL_ADDR_TXT as string,\n\t\tACCT_ROLE_CD as string,\n\t\tBIRTH_DT as string,\n\t\tGNDR_CD as string,\n\t\tDO_NOT_CALL_IND as string,\n\t\tDO_NOT_SLCT_IND as string,\n\t\tDO_NOT_EMAIL_IND as string,\n\t\tDO_NOT_MAIL_IND as string,\n\t\tEXTRACT_DATE as string,\n\t\tMRN as string,\n\t\tPLAN_DSC as string,\n\t\tHOUSEHOLD_SIZE as string,\n\t\tHOUSEHOLD_INCOME as string,\n\t\tGRANDFATHERED_PLAN as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_lead_update*']) ~> source1\nsource1 derive(ADFId__c = uuid()) ~> addADFId\naddADFId split(isNull(AGILITY_ID)||isNull(EVENT),\n\tdisjoint: false) ~> ConditionalSplit1@(RejectCondition, toSFDC)\nConditionalSplit1@RejectCondition derive(REJECT_REASON = iif(isNull(AGILITY_ID)||isNull(EVENT), concat('ADF:REQUIRED FIELD MISSING: ', iif(isNull(AGILITY_ID), 'AGILITY_ID ', ''),  iif(isNull(EVENT), 'EVENT ', '')), '')) ~> RejectReason\nRejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit1@toSFDC derive(EFFECTIVE_DATE = iifNull(toString(toDate(EFFECTIVE_DATE, 'yyyyMMdd')), EFFECTIVE_DATE),\n\t\tEVENT_DATE = iifNull(toString(toDate(EVENT_DATE, 'yyyyMMdd')), EVENT_DATE),\n\t\tEXTRACT_DATE = iifNull(toString(toDate(EXTRACT_DATE, 'yyyyMMdd')), EXTRACT_DATE),\n\t\tDO_NOT_CALL_IND = toBoolean(DO_NOT_CALL_IND),\n\t\tDO_NOT_SLCT_IND = toBoolean(DO_NOT_SLCT_IND),\n\t\tDO_NOT_EMAIL_IND = toBoolean(DO_NOT_EMAIL_IND),\n\t\tDO_NOT_MAIL_IND = toBoolean(DO_NOT_MAIL_IND)) ~> DerivedColumn2\nDerivedColumn2 select(mapColumn(\n\t\tADFId__c,\n\t\tAgility_ID__c = AGILITY_ID,\n\t\tContact_ID__c = CONTACT_ID,\n\t\tCNX_Family_ID__c = CNX_FAMILY_ID,\n\t\tHestia_Plan_Id__c = HESTIA_PLAN_ID,\n\t\tEffective_Date__c = EFFECTIVE_DATE,\n\t\tEvent__c = EVENT,\n\t\tEvent_Date__c = EVENT_DATE,\n\t\tEvent_Source__c = EVENT_SOURCE,\n\t\tEvent_Outcome__c = EVENT_OUTCOME,\n\t\tFirst_Name__c = FRST_NM,\n\t\tMiddle_Name__c = MID_INIT_TXT,\n\t\tLast_Name__c = LAST_NM,\n\t\tAddress1__c = ADDR_LN1_TXT,\n\t\tAddress2__c = ADDR_LN2_TXT,\n\t\tCity__c = CITY_NM,\n\t\tState__c = ST_CD,\n\t\tZip__c = ZIP_CD,\n\t\tZip_Plus_4__c = ZIP4_CD,\n\t\tHome_Phone__c = HOME_PHN_NBR,\n\t\tWork_Phone__c = BUSN_PHN_NBR,\n\t\tCell_Phone__c = MOBL_PHN_NBR,\n\t\tFax__c = FAX_NBR,\n\t\tEmail__c = EMAIL_ADDR_TXT,\n\t\tRole_Code__c = ACCT_ROLE_CD,\n\t\tDate_of_Birth__c = BIRTH_DT,\n\t\tGender__c = GNDR_CD,\n\t\tDo_Not_Call_Ind__c = DO_NOT_CALL_IND,\n\t\tDo_Not_Contact_Ind__c = DO_NOT_SLCT_IND,\n\t\tDo_Not_Email_Ind__c = DO_NOT_EMAIL_IND,\n\t\tDo_Not_Mail_Ind__c = DO_NOT_MAIL_IND,\n\t\tExtract_Date__c = EXTRACT_DATE,\n\t\tMRN__c = MRN,\n\t\tPlan_Name__c = PLAN_DSC,\n\t\tHousehold_Size__c = HOUSEHOLD_SIZE,\n\t\tHousehold_Income__c = HOUSEHOLD_INCOME,\n\t\tgrandfathered_Plan__c = GRANDFATHERED_PLAN\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\naddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_lead_update_raw.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> IntremOutput\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_lead_update_source_reject.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> RejectOutput\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_lead_update_Stage_Policy_Status__c.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> MapLeadOutput"
+		}
+	}
+}

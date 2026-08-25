@@ -1,0 +1,24 @@
+{
+	"name": "Intermediate_raw",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "sfdcdataxchange",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "raw",
+				"container": "intermediate"
+			},
+			"columnDelimiter": "|",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

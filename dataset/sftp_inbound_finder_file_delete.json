@@ -1,0 +1,35 @@
+{
+	"name": "sftp_inbound_finder_file_delete",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFTP",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"env": {
+				"type": "string"
+			},
+			"folder": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"fileName": "*",
+				"folderPath": {
+					"value": "@concat(dataset().env, '/', dataset().folder, '/inbound/finder_files')",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

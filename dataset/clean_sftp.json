@@ -1,0 +1,18 @@
+{
+	"name": "clean_sftp",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFTP",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": "/test"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,466 @@
+{
+	"name": "test_extract_queries",
+	"properties": {
+		"activities": [
+			{
+				"name": "ExportMetadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "SetRunDateSuffix",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SetSTDRunDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SetRunDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "export_metadata.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "FilterTest",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "ExportMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('ExportMetadata').output.value",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@contains(pipeline().parameters.test_file, item().FileName)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ExtractSalesforce",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "FilterTest",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('FilterTest').output.Value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "FromSalesforce",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SalesforceSource",
+									"query": {
+										"value": "@replace(replace(replace(replace(item().Query,'STD_ADFLastUpdateTime', concat(replace(item().LastUpdateTime, ' ','T'), 'Z')), 'STD_ADFEndTime', variables('std_run_date')),'ADFLastUpdateTime', item().LastUpdateTime), 'ADFEndTime', variables('run_date'))",
+										"type": "Expression"
+									},
+									"readBehavior": "query"
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "SFDC_test",
+									"type": "DatasetReference",
+									"parameters": {
+										"api_name": "Contact"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "inbound_salesforce_file",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "AddMetadata",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "FromSalesforce",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "processed_metadata",
+								"value": {
+									"value": "@item()",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SetRunDateSuffix",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_date_suffix",
+					"value": {
+						"value": "@formatDateTime(pipeline().TriggerTime, 'yyyyMMdd_HHmmss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetSTDRunDate",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "std_run_date",
+					"value": {
+						"value": "@replace(startOfDay(pipeline().TriggerTime), '.0000000', '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetRunDate",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_date",
+					"value": {
+						"value": "@replace(replace(replace(startOfDay(pipeline().TriggerTime), 'T', ' '), 'Z', ''), '.0000000', '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ExportTransformation",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "ExtractSalesforce",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('processed_metadata')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "If Transformation",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(item().Transformation, 'true')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "ToOutbound",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": "salesforce",
+													"wildcardFileName": {
+														"value": "@concat(item().FileName, '*')",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "AzureBlobStorageWriteSettings"
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".csv"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "inbound_salesforce_file",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "export_files",
+												"type": "DatasetReference"
+											}
+										]
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Transformation",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "export_transformation",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"file_name": {
+													"value": "@item().FileName",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Upload2SFTP",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "If Transformation",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": "export_files",
+										"wildcardFileName": {
+											"value": "@concat(item().FileName, '*')",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "SftpWriteSettings",
+										"operationTimeout": "01:00:00",
+										"useTempFileRename": true
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ""
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "export_files",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "sftp_outbound",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().parameters.env",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@item().Folder",
+											"type": "Expression"
+										},
+										"filename": "@item().FileName"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"test_file": {
+				"type": "array",
+				"defaultValue": [
+					"ob_kpif_medicaid"
+				]
+			},
+			"env": {
+				"type": "string",
+				"defaultValue": "test"
+			}
+		},
+		"variables": {
+			"run_date": {
+				"type": "String"
+			},
+			"run_date_suffix": {
+				"type": "String"
+			},
+			"std_run_date": {
+				"type": "String"
+			},
+			"processed_metadata": {
+				"type": "Array"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

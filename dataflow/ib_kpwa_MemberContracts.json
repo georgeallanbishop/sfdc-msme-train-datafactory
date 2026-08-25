@@ -1,0 +1,64 @@
+{
+	"name": "ib_kpwa_MemberContracts",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "IntermediateOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "RejectOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "InsertMemberContracts"
+				}
+			],
+			"transformations": [
+				{
+					"name": "AddADFId"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "DerivedColumn"
+				},
+				{
+					"name": "RejectReason"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "Select"
+				}
+			],
+			"script": "source(output(\n\t\t{Member ID} as string,\n\t\tRegion as string,\n\t\t{Account ID} as string,\n\t\t{Contract Effective Date} as string,\n\t\t{Product Name} as string,\n\t\t{Product Description} as string,\n\t\t{Product Type} as string,\n\t\t{Plan Name} as string,\n\t\t{Plan ID Number} as string,\n\t\t{Purchaser ID} as string,\n\t\t{Purchaser Name} as string,\n\t\t{Enrollment Unit ID} as string,\n\t\t{Enrollment Unit Name} as string,\n\t\t{Billing Unit ID} as string,\n\t\t{Billing Unit Name} as string,\n\t\t{Contract Enrollment/Start Date} as string,\n\t\t{Contract Enrollment/Start Reason Code} as string,\n\t\t{Contract Enrollment/Start Reason Description} as string,\n\t\t{Contract Termination/End Date} as string,\n\t\t{Contract Termination/End Reason Code} as string,\n\t\t{Contract Termination/End Reason Description} as string,\n\t\t{Contract Renewal Date} as string,\n\t\t{Product Rate} as string,\n\t\t{Current Dues} as string,\n\t\t{Future Dues} as string,\n\t\t{Dental Flag} as string,\n\t\t{Vision Flag} as string,\n\t\t{Chiropractic Flag} as string,\n\t\t{Other Option 1 Flag} as string,\n\t\t{Other Option 2 Flag} as string,\n\t\t{Rate-up Tier} as string,\n\t\t{Rate-up Factor} as string,\n\t\t{Rate-up Effective Date} as string,\n\t\t{Rate-up End Date} as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/KPWA_MemberContracts*']) ~> source1\nsource1 derive(ADFId__c = uuid()) ~> AddADFId\nAddADFId split(isNull({Member ID})||isNull({Account ID})||isNull({Contract Effective Date})||isNull({Product Type})||isNull({Plan Name})||isNull({Purchaser ID})||isNull({Enrollment Unit ID})||isNull({Enrollment Unit Name}),\n\tdisjoint: false) ~> ConditionalSplit1@(RejectCondition, toSFDC)\nConditionalSplit1@toSFDC derive({Contract Effective Date} = coalesce(toString(toDate({Contract Effective Date}, 'YYYYMMdd')), {Contract Effective Date}),\n\t\t{Contract Enrollment/Start Date} = coalesce(toString(toDate({Contract Enrollment/Start Date}, 'YYYYMMdd')), {Contract Enrollment/Start Date}),\n\t\t{Contract Termination/End Date} = coalesce(toString(toDate({Contract Termination/End Date}, 'YYYYMMdd')), {Contract Termination/End Date}),\n\t\t{Rate-up Effective Date} = coalesce(toString(toDate({Rate-up Effective Date}, 'YYYYMMdd')), {Rate-up Effective Date}),\n\t\t{Rate-up End Date} = coalesce(toString(toDate({Rate-up End Date}, 'YYYYMMdd')), {Rate-up End Date})) ~> DerivedColumn\nConditionalSplit1@RejectCondition derive(REJECT_REASON = iif(isNull({Member ID})||isNull({Account ID})||isNull({Contract Effective Date})||isNull({Product Type})||isNull({Plan Name})||isNull({Purchaser ID})||isNull({Enrollment Unit ID})||isNull({Enrollment Unit Name}), concat('ADF:REQUIRED FEILD MISSING: ', iif(isNull({Member ID}), '{Member ID} ', ''), iif(isNull({Account ID}), '{Account ID} ', ''), iif(isNull({Contract Effective Date}), '{Contract Effective Date} ', ''), iif(isNull({Product Type}), '{Product Type} ', ''), iif(isNull({Plan Name}), '{Plan Name} ', ''), iif(isNull({Purchaser ID}), '{Purchaser ID} ', ''), iif(isNull({Enrollment Unit ID}), '{Enrollment Unit ID} ', ''), iif(isNull({Enrollment Unit Name}), '{Enrollment Unit Name}.', '')), '')) ~> RejectReason\nRejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nDerivedColumn select(mapColumn(\n\t\tADFId__c,\n\t\tMedical_Record_Number__c = {Member ID},\n\t\tRegion_Code__c = Region,\n\t\tFamily_Account_ID__c = {Account ID},\n\t\tContract_Effective_Date__c = {Contract Effective Date},\n\t\tPlan__c = {Product Name},\n\t\tPlan_Description__c = {Product Description},\n\t\tProduct_Type__c = {Product Type},\n\t\tPlan_Name__c = {Plan Name},\n\t\tPlan_ID_Number__c = {Plan ID Number},\n\t\tPurchaser_ID__c = {Purchaser ID},\n\t\tPurchaser_Name__c = {Purchaser Name},\n\t\tEnrollment_Unit_ID__c = {Enrollment Unit ID},\n\t\tEnrollment_Unit_Name__c = {Enrollment Unit Name},\n\t\tBilling_Unit_ID__c = {Billing Unit ID},\n\t\tBilling_Unit_Name__c = {Billing Unit Name},\n\t\tContract_Enrollment_Start_Date__c = {Contract Enrollment/Start Date},\n\t\tContract_Enrollment_Start_Reason_Code__c = {Contract Enrollment/Start Reason Code},\n\t\tContract_Enrollment_Reason_Description__c = {Contract Enrollment/Start Reason Description},\n\t\tContract_Termination_End_Date__c = {Contract Termination/End Date},\n\t\tContract_Termination_Reason_Code__c = {Contract Termination/End Reason Code},\n\t\tContract_Termination_Reason_Description__c = {Contract Termination/End Reason Description},\n\t\tContract_Renewal_Date__c = {Contract Renewal Date},\n\t\tProduct_Rate__c = {Product Rate},\n\t\tCurrent_Dues__c = {Current Dues},\n\t\tFuture_Dues__c = {Future Dues},\n\t\tDental_Flag__c = {Dental Flag},\n\t\tVision_Flag__c = {Vision Flag},\n\t\tChiropractic_Flag__c = {Chiropractic Flag},\n\t\tOther_Option_Flag_1__c = {Other Option 1 Flag},\n\t\tOther_Option_Flag_2__c = {Other Option 2 Flag},\n\t\tRate_Up_Tier__c = {Rate-up Tier},\n\t\tRate_Up_Factor__c = {Rate-up Factor},\n\t\tRate_Up_Effective_Date__c = {Rate-up Effective Date},\n\t\tRate_Up_End_Date__c = {Rate-up End Date}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select\nAddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('KPWA_MemberContracts_raw.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> IntermediateOutput\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('kpwa_MemberContracts_source_reject.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> RejectOutput\nSelect sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('KPWA_MemberContracts_Member_Contract__c.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> InsertMemberContracts"
+		}
+	}
+}

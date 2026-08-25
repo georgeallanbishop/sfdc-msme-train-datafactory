@@ -1,0 +1,77 @@
+{
+	"name": "ib_kpma_meeting_venue",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "toReject"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedInbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "Insert"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "Upsert"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "rejectReason"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "AddADFId"
+				},
+				{
+					"name": "DerivedColumn4"
+				},
+				{
+					"name": "ConditionalSplit2"
+				},
+				{
+					"name": "AddStatus"
+				}
+			],
+			"script": "source(output(\n\t\t{ACTION CODE} as string,\n\t\tFACILITY_UID as string,\n\t\t{FACILITY NAME} as string,\n\t\t{VENUE TYPE} as string,\n\t\tADDRESS1 as string,\n\t\tADDRESS2 as string,\n\t\tCITY as string,\n\t\tSTATE as string,\n\t\tZIP as string,\n\t\t{ZIP+4 } as string,\n\t\tCOUNTY as string,\n\t\t{VENUE PHONE} as string,\n\t\t{VENUE NOTES} as string,\n\t\t{VENUE CAPACITY} as string,\n\t\t{VENUE TYPE OTHER} as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_meeting_venue*']) ~> source1\nDerivedColumn4 select(mapColumn(\n\t\tADFId__c,\n\t\tFacility_Id__c = FACILITY_UID,\n\t\tName = {FACILITY NAME},\n\t\tType__c = {VENUE TYPE},\n\t\tStreet__c = ADDRESS1,\n\t\tCity__c = CITY,\n\t\tState__c = STATE,\n\t\tPostal_Code__c,\n\t\tCOUNTY__c = COUNTY,\n\t\tPhone_Number__c = {VENUE PHONE},\n\t\tNotes__c = {VENUE NOTES},\n\t\tSeating_Capacity__c = {VENUE CAPACITY},\n\t\tStreet2__c = ADDRESS2,\n\t\tMeeting_Venue__c,\n\t\tId = FACILITY_UID,\n\t\t{ACTION CODE},\n\t\tStatus__c,\n\t\tVenue_Type_Other__c = {VENUE TYPE OTHER}\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select\nAddStatus split((isNull(FACILITY_UID) && in(['U', 'D'], upper({ACTION CODE})))||isNull({FACILITY NAME})||isNull({ACTION CODE}),\n\tdisjoint: false) ~> ConditionalSplit1@(Reject, ToSFDC)\nConditionalSplit1@Reject derive(REJECT_REASON = concat('ADF Required Field Contains NULL Value: ', iif(isNull(FACILITY_UID), 'FACILITY_UID ', ''), iif(isNull({FACILITY NAME}), 'FACILITY_NAME ', ''), iif(isNull({ACTION CODE}), 'ACTION_CODE', ''))) ~> rejectReason\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nsource1 derive(ADFId__c = uuid()) ~> AddADFId\nConditionalSplit1@ToSFDC derive(Postal_Code__c = concatWS('-', ZIP, {ZIP+4 }),\n\t\tMeeting_Venue__c = true()) ~> DerivedColumn4\nSelect split(upper({ACTION CODE}) == 'A',\n\tin(['U', 'D'], upper({ACTION CODE})),\n\tdisjoint: false) ~> ConditionalSplit2@(toInsert, toUpsert)\nAddADFId derive(Status__c = case(in(['A', 'U'], {ACTION CODE}), 'Active', ({ACTION CODE} == 'D'), 'Inactive')) ~> AddStatus\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_meeting_venue_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toReject\nAddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_meeting_venue_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedInbound\nConditionalSplit2@toInsert sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_meeting_venue_Facilities__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tADFId__c,\n\t\tFacility_Id__c,\n\t\tName,\n\t\tType__c,\n\t\tStreet__c,\n\t\tCity__c,\n\t\tState__c,\n\t\tPostal_Code__c,\n\t\tCOUNTY__c,\n\t\tPhone_Number__c,\n\t\tNotes__c,\n\t\tSeating_Capacity__c,\n\t\tStreet2__c,\n\t\tMeeting_Venue__c,\n\t\tId,\n\t\tStatus__c,\n\t\tVenue_Type_Other__c\n\t),\n\tpartitionBy('hash', 1)) ~> Insert\nConditionalSplit2@toUpsert sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_meeting_venue_Facilities__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tADFId__c,\n\t\tFacility_Id__c,\n\t\tName,\n\t\tType__c,\n\t\tStreet__c,\n\t\tCity__c,\n\t\tState__c,\n\t\tPostal_Code__c,\n\t\tCOUNTY__c,\n\t\tPhone_Number__c,\n\t\tNotes__c,\n\t\tSeating_Capacity__c,\n\t\tStreet2__c,\n\t\tMeeting_Venue__c,\n\t\tId,\n\t\tStatus__c,\n\t\tVenue_Type_Other__c\n\t),\n\tpartitionBy('hash', 1)) ~> Upsert"
+		}
+	}
+}

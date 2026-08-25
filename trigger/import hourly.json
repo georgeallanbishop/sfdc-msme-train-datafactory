@@ -1,0 +1,29 @@
+{
+	"name": "import hourly",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "master_pipeline_import",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2022-12-20T00:00:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"hours": [
+						13
+					]
+				}
+			}
+		}
+	}
+}

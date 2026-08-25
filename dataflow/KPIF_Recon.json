@@ -1,0 +1,61 @@
+{
+	"name": "KPIF_Recon",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "toUpsert"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "toReject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "addADFId"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "RejectReason"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\torder_id as string,\n\t\toutcome_code as string,\n\t\tevent_date as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/KPIF_Recon_*']) ~> source1\nConditionalSplit1@Upsert select(mapColumn(\n\t\tADFId__c,\n\t\tId = order_id,\n\t\tStatus__c = outcome_code,\n\t\tFulfilled__c = event_date\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nsource1 derive(ADFId__c = uuid()) ~> addADFId\naddADFId split(isNull(order_id)||isNull(event_date),\n\tdisjoint: false) ~> ConditionalSplit1@(Reject, Upsert)\nConditionalSplit1@Reject derive(REJECT_REASON = concat('ADF:Field contain NULL value: ', iif(isNull(order_id), 'order_id ', ''), iif(isNull(event_date), 'event_date ', ''))) ~> RejectReason\nRejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['KPIF_Recon_Fulfillment_Orders__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toUpsert\naddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['KPIF_Recon_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['KPIF_Recon_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toReject"
+		}
+	}
+}

@@ -1,0 +1,181 @@
+{
+	"name": "inbound_archive",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFTP",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"fileName": "ib_kpma_finder_file_SEP_D6_20230405_000000_1747499.csv",
+				"folderPath": "/prod/cde/inbound_archive/finder_files"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "AGLTY_INDIV_ID",
+				"type": "String"
+			},
+			{
+				"name": "PROMO_ID",
+				"type": "String"
+			},
+			{
+				"name": "PREFIX",
+				"type": "String"
+			},
+			{
+				"name": "FIRST_NAME",
+				"type": "String"
+			},
+			{
+				"name": "MIDDLE_NAME",
+				"type": "String"
+			},
+			{
+				"name": "LAST_NAME",
+				"type": "String"
+			},
+			{
+				"name": "SUFFIX",
+				"type": "String"
+			},
+			{
+				"name": "HOME_ADDRESS_1",
+				"type": "String"
+			},
+			{
+				"name": "HOME_ADDRESS_2",
+				"type": "String"
+			},
+			{
+				"name": "HOME_CITY",
+				"type": "String"
+			},
+			{
+				"name": "HOME_STATE",
+				"type": "String"
+			},
+			{
+				"name": "HOME_ZIPCODE",
+				"type": "String"
+			},
+			{
+				"name": "HOME_ZIP4",
+				"type": "String"
+			},
+			{
+				"name": "MAILING_ADDRESS_1",
+				"type": "String"
+			},
+			{
+				"name": "MAILING_ADDRESS_2",
+				"type": "String"
+			},
+			{
+				"name": "MAILING_CITY",
+				"type": "String"
+			},
+			{
+				"name": "MAILING_STATE",
+				"type": "String"
+			},
+			{
+				"name": "MAILING_ZIPCODE",
+				"type": "String"
+			},
+			{
+				"name": "MAILING_ZIP4",
+				"type": "String"
+			},
+			{
+				"name": "PRI_PHONE",
+				"type": "String"
+			},
+			{
+				"name": "PRI_PHONE_EXT",
+				"type": "String"
+			},
+			{
+				"name": "ALT_PHONE",
+				"type": "String"
+			},
+			{
+				"name": "ALT_PHONE_EXT",
+				"type": "String"
+			},
+			{
+				"name": "REGION",
+				"type": "String"
+			},
+			{
+				"name": "GROUP_TYPE",
+				"type": "String"
+			},
+			{
+				"name": "GROUP_KPSA_PLAN",
+				"type": "String"
+			},
+			{
+				"name": "MEDI_REC_NUMBER",
+				"type": "String"
+			},
+			{
+				"name": "GROUP_ID",
+				"type": "String"
+			},
+			{
+				"name": "ENROLLMENT_UNIT_ID",
+				"type": "String"
+			},
+			{
+				"name": "SSN",
+				"type": "String"
+			},
+			{
+				"name": "BIRTHDATE",
+				"type": "String"
+			},
+			{
+				"name": "GENDER",
+				"type": "String"
+			},
+			{
+				"name": "PREF_LANG",
+				"type": "String"
+			},
+			{
+				"name": "OWNER",
+				"type": "String"
+			},
+			{
+				"name": "GROUP_NAME",
+				"type": "String"
+			},
+			{
+				"name": "BAR_CODE",
+				"type": "String"
+			},
+			{
+				"name": "EMAIL_ID",
+				"type": "String"
+			},
+			{
+				"name": "SUB_REGION",
+				"type": "String"
+			},
+			{
+				"name": "PREV_AGLTY_ID",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

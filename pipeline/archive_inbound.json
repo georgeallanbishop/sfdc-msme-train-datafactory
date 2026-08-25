@@ -1,0 +1,123 @@
+{
+	"name": "archive_inbound",
+	"properties": {
+		"activities": [
+			{
+				"name": "ArchiveInbound",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.folders",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "CopyInboundFiles",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "SftpReadSettings",
+										"maxConcurrentConnections": 3,
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat(pipeline().parameters.env, '/', item(), '/inbound')",
+											"type": "Expression"
+										},
+										"wildcardFileName": "*",
+										"enablePartitionDiscovery": false,
+										"disableChunking": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "SftpWriteSettings",
+										"maxConcurrentConnections": 3,
+										"operationTimeout": "01:00:00",
+										"useTempFileRename": true
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "sftp_wildcard",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "sftp_inbound_archive",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().parameters.env",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"folders": {
+				"type": "array",
+				"defaultValue": [
+					"campaignfiles",
+					"kpif",
+					"kpma",
+					"medicaid",
+					"epsilon",
+					"cde",
+					"kpwa",
+					"veritas"
+				]
+			},
+			"env": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

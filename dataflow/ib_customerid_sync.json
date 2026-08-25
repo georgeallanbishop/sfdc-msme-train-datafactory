@@ -1,0 +1,77 @@
+{
+	"name": "ib_customerid_sync",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "IntermOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "RejectOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "ContactOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "LeadOutput"
+				}
+			],
+			"transformations": [
+				{
+					"name": "addADFId"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "RejectReason"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "toContact"
+				},
+				{
+					"name": "toLead"
+				},
+				{
+					"name": "FilterLead"
+				},
+				{
+					"name": "FilterContact"
+				}
+			],
+			"script": "source(output(\n\t\tAGLTY_INDIV_ID as string,\n\t\tCONTACT_ID as string,\n\t\tContact_Idinsertdate as string,\n\t\tExtract_date as string,\n\t\tHLTH_INSR_RSPDR_CD as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_customerid_sync*']) ~> source1\nsource1 derive(ADFId__c = uuid()) ~> addADFId\naddADFId split(isNull(AGLTY_INDIV_ID)||isNull(CONTACT_ID)||(notEquals(iifNull(CONTACT_ID, 'NOT_NULL_check'), 'NOT_NULL_check') && not(in(['003', '00Q'], upper(substring(CONTACT_ID, 1, 3))))),\n\tdisjoint: false) ~> ConditionalSplit1@(RejectCondition, toSFDC)\nConditionalSplit1@RejectCondition derive(REJECT_REASON = concat(iif(isNull(AGLTY_INDIV_ID)||isNull(CONTACT_ID), concat('ADF:REQUIRED FIELD MISSING: ', iif(isNull(AGLTY_INDIV_ID), 'AGLTY_INDIV_ID ', ''), iif(isNull(CONTACT_ID), 'CONTACT_ID.', '')), ''),\r\n       iif((notEquals(iifNull(CONTACT_ID, 'NOT_NULL_check'), 'NOT_NULL_check') && not(in(['003', '00Q'], upper(substring(CONTACT_ID, 1, 3))))), concat('ADF:INVALID \"CONTACT_ID\": CONTACT ID should begin with \"003\" or \"00Q\". Received CONTACT_ID: ', CONTACT_ID), ''))) ~> RejectReason\nRejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit1@toSFDC select(mapColumn(\n\t\tADFId__c,\n\t\tCustomer_id__c = AGLTY_INDIV_ID,\n\t\tId = CONTACT_ID\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> toContact\nConditionalSplit1@toSFDC select(mapColumn(\n\t\tADFId__c,\n\t\tCustomer_id__c = AGLTY_INDIV_ID,\n\t\tId = CONTACT_ID\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> toLead\ntoLead filter(rlike(upper(Id), `00Q.*`)) ~> FilterLead\ntoContact filter(rlike(upper(Id), `003.*`)) ~> FilterContact\naddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_customerid_sync_raw.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> IntermOutput\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_customerid_sync_source_reject.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> RejectOutput\nFilterContact sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_customerid_sync_Contact.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> ContactOutput\nFilterLead sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_customerid_sync_Lead.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> LeadOutput"
+		}
+	}
+}

@@ -1,0 +1,24 @@
+{
+	"name": "SFDC_test",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SF_UAT",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"api_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SalesforceObject",
+		"schema": [],
+		"typeProperties": {
+			"objectApiName": {
+				"value": "@dataset().api_name",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,45 @@
+{
+	"name": "sf-msme-train-datafactory",
+	"properties": {
+		"globalParameters": {
+			"env": {
+				"type": "string",
+				"value": "train"
+			},
+			"lic_env": {
+				"type": "string",
+				"value": "UAT"
+			},
+			"databricks_url": {
+				"type": "string",
+				"value": "https://adb-3789908119125881.1.azuredatabricks.net"
+			},
+			"databricks_kv": {
+				"type": "string",
+				"value": "sftp_kv"
+			},
+			"databricks_secret": {
+				"type": "string",
+				"value": "sfdc-databricks-token"
+			},
+			"env_prod": {
+				"type": "string",
+				"value": "prod"
+			},
+			"email": {
+				"type": "string",
+				"value": "george.bishop@ttecdigital.com,smit.patil@ttecdigital.com,praveen.kavali@ttecdigital.com"
+			}
+		},
+		"trustModeClaimForMi": {
+			"value": "Enabled",
+			"editable": true
+		}
+	},
+	"location": "West US 2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "98c2efbb-3460-4a64-8c29-ad10119eca71",
+		"tenantId": "5d5c9a50-c854-4ea3-b05d-16388b14d5b3"
+	}
+}

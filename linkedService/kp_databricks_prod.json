@@ -1,0 +1,31 @@
+{
+	"name": "kp_databricks_prod",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-1104746105911155.15.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv_prod",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "kp-databricks-prod-token"
+			},
+			"instancePoolId": "0331-181517-fusty300-pool-d1io5xgz",
+			"newClusterNumOfWorker": "2:8",
+			"newClusterSparkEnvVars": {
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "9.1.x-scala2.12",
+			"newClusterInitScripts": [],
+			"clusterOption": "Autoscaling"
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

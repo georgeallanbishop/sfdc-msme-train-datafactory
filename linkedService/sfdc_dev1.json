@@ -1,0 +1,33 @@
+{
+	"name": "sfdc_dev1",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Salesforce",
+		"typeProperties": {
+			"environmentUrl": "https://test.salesforce.com",
+			"username": "karedataexchange@teletechinc.onmicrosoft.com.kpprod.kpuat",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "salesforce-password"
+			},
+			"securityToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "salesforce-token"
+			},
+			"apiVersion": "54.0"
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

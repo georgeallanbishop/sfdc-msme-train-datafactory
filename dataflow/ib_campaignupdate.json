@@ -1,0 +1,83 @@
+{
+	"name": "ib_campaignupdate",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "Inbound"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertN"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertU"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "Reject"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedInbound"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select"
+				},
+				{
+					"name": "filterU"
+				},
+				{
+					"name": "filterN"
+				},
+				{
+					"name": "DerivedColumn"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "errorLog"
+				},
+				{
+					"name": "AddADFId"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "Select3"
+				}
+			],
+			"script": "source(output(\n\t\tAction as string,\n\t\tStatus as string,\n\t\t{Start Date} as string,\n\t\t{End Date} as string,\n\t\t{Path (Key Field)} as string,\n\t\t{Promo ID (Key Field)} as string,\n\t\t{Lead Source Weight} as string,\n\t\t{Prospect Type} as string,\n\t\tBUSINESS_LINE as string,\n\t\tBUSINESS_LINE_NAME as string,\n\t\tMarket as string,\n\t\tTerritory as string,\n\t\t{Media Type} as string,\n\t\tSegment as string,\n\t\tProgram as string,\n\t\tCampaign as string,\n\t\t{Lead Source Type} as string,\n\t\t{Lead Source Name} as string,\n\t\tMEDIA_CODE as string,\n\t\tMEDIA_DESCRIPTION as string,\n\t\tCREATIVE_CODE as string,\n\t\tCREATIVE_DESCRIPTION as string,\n\t\t{800#} as string,\n\t\tDNIS as string,\n\t\t{Call Routing Code} as string,\n\t\t{Use CM Agent#  (Y/N)} as string,\n\t\t{Agent #} as string,\n\t\t{LG Suffix} as string,\n\t\t{Referral ID Req (Y/N)} as string,\n\t\t{Referral ID Tool Tip (mouse over)} as string,\n\t\tOffer as string,\n\t\t{Campaign ID} as string,\n\t\t{Event ID} as string,\n\t\t{Ad Agency ID} as string,\n\t\t{URL (Media Path)} as string,\n\t\t{CID Code (Application Code)} as string,\n\t\t{CID Referring URL} as string,\n\t\tEXTRACT_DATE as string,\n\t\tAttribute as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_campaignupdate*']) ~> Inbound\nDerivedColumn select(mapColumn(\n\t\tADFId__c,\n\t\tIsActive = DerivedColumn@Status,\n\t\tStartDate = {Start Date},\n\t\tEndDate = {End Date},\n\t\tMedia_Path_Name__c = {Path (Key Field)},\n\t\tPromo_Id__c = {Promo ID (Key Field)},\n\t\tLead_Source_Weight__c = {Lead Source Weight},\n\t\tProspect_Type__c = {Prospect Type},\n\t\tLOB__c = BUSINESS_LINE,\n\t\tBUSINESS_LINE_NAME__c = BUSINESS_LINE_NAME,\n\t\tMedia_Market__c = Market,\n\t\tMedia_Territory_Name__c = Territory,\n\t\t{ media_type__c} = {Media Type},\n\t\tMedia_Segment_Name__c = Segment,\n\t\tProgram__c = Program,\n\t\tName = Campaign,\n\t\tLead_Source_Type__c = {Lead Source Type},\n\t\tLeadSourceName__c = {Lead Source Name},\n\t\tMedia_Code__c = MEDIA_CODE,\n\t\tMedia_Description__c = MEDIA_DESCRIPTION,\n\t\tCreative_Code__c = CREATIVE_CODE,\n\t\tCreative_Description__c = CREATIVE_DESCRIPTION,\n\t\tTFN__c = {800#},\n\t\tDNIS__c = DNIS,\n\t\tCall_Routing_Info__c = {Call Routing Code},\n\t\tUse_CM_Agent__c = {Use CM Agent#  (Y/N)},\n\t\tAgent_Number__c = {Agent #},\n\t\tLG_Suffix__c = {LG Suffix},\n\t\tReferral_ID_Req__c = {Referral ID Req (Y/N)},\n\t\tReferral_ID_Tool_Tip__c = {Referral ID Tool Tip (mouse over)},\n\t\tOffer__c = Offer,\n\t\tKP_Program__c = {Campaign ID},\n\t\tEvent_SysID__c = {Event ID},\n\t\tcls_ad_id__c = {Ad Agency ID},\n\t\tPath__c = {URL (Media Path)},\n\t\tCID_Code__c = {CID Code (Application Code)},\n\t\tCID_Referring_URL__c = {CID Referring URL},\n\t\tExtract_Date__c = EXTRACT_DATE,\n\t\tAttribute__c = Attribute,\n\t\tACTION = Action\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select\nSelect filter(upper(ACTION) == 'U') ~> filterU\nSelect filter(upper(ACTION) == 'N') ~> filterN\nConditionalSplit1@cleanDATA derive(StartDate = coalesce(toString(toDate({Start Date}, 'MM/dd/yyyy')),{Start Date}),\n\t\tEND_DATE = coalesce(toString(toDate({End Date}, 'MM/dd/yyyy')),{End Date}),\n\t\tSTATUS = toBoolean(iif(upper(Status)=='A','true',iif(upper(Status)=='I','false',''))),\n\t\tEXTRACT_DATE = coalesce(toString(toDate(EXTRACT_DATE, 'MM/dd/yyyy')),EXTRACT_DATE),\n\t\tREFERRAL_ID = toBoolean({Referral ID Req (Y/N)}),\n\t\tStatus = toBoolean(iif(upper(Status)=='A','true',iif(upper(Status)=='I','false',''))),\n\t\t{Referral ID Req (Y/N)} = toBoolean(iif(isNull({Referral ID Req (Y/N)}),'false',{Referral ID Req (Y/N)})),\n\t\t{Use CM Agent#  (Y/N)} = toBoolean(iif(isNull({Use CM Agent#  (Y/N)}),'false',{Use CM Agent#  (Y/N)})),\n\t\t{Lead Source Weight} = iif(isNull({Lead Source Weight}),'1',{Lead Source Weight})) ~> DerivedColumn\nAddADFId split(isNull(Status)||isNull({Start Date})||isNull({Promo ID (Key Field)})||isNull({Lead Source Name})||(isNull({800#}) && (upper({Path (Key Field)}) == 'INBOUND'||upper({Path (Key Field)}) == 'IB'))||(isNull(DNIS) && (upper({Path (Key Field)}) == 'INBOUND'||upper({Path (Key Field)}) == 'IB'))||isNull(Action)||not(in(['U', 'u', 'N', 'n'], Action)),\n\tdisjoint: false) ~> ConditionalSplit1@(rejectNULL, cleanDATA)\nConditionalSplit1@rejectNULL derive(REJECT_REASON = concat(iif(isNull(Status)||isNull({Start Date})||isNull({Promo ID (Key Field)})||isNull({Lead Source Name})||isNull({800#})||isNull(DNIS)||isNull(Action), concat('ADF:Field contains NULL value: ', iif(isNull(Action), 'Action, ', ''), iif(isNull(Status), 'Status, ', ''), iif(isNull({Start Date}), '{Start Date}, ', ''), iif(isNull({Path (Key Field)}), '{Path (Key Field)}, ', ''), iif(isNull({Promo ID (Key Field)}), '{Promo ID (Key Field)}, ', ''), iif(isNull({Lead Source Name}), '{Lead Source Name}, ', ''), iif(isNull({800#})&&upper({Path (Key Field)})=='IB', '{800#}, ', ''), iif(isNull(DNIS)&&upper({Path (Key Field)})=='IB', 'DNIS', ''), '.'), ''), iif(not(in(['U', 'u', 'N', 'n'], Action)), concat('ADF:Action column contain invalid value: ', Action, '.'), ''))) ~> errorLog\nInbound derive(ADFId__c = uuid()) ~> AddADFId\nerrorLog select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nfilterN select(mapColumn(\n\t\tADFId__c,\n\t\tIsActive,\n\t\tStartDate,\n\t\tEndDate,\n\t\tMedia_Path_Name__c,\n\t\tPromo_Id__c,\n\t\tLead_Source_Weight__c,\n\t\tProspect_Type__c,\n\t\tLOB__c,\n\t\tBUSINESS_LINE_NAME__c,\n\t\tMedia_Market__c,\n\t\tMedia_Territory_Name__c,\n\t\tmedia_type__c = { media_type__c},\n\t\tMedia_Segment_Name__c,\n\t\tProgram__c,\n\t\tName,\n\t\tLead_Source_Type__c,\n\t\tLeadSourceName__c,\n\t\tMedia_Code__c,\n\t\tMedia_Description__c,\n\t\tCreative_Code__c,\n\t\tCreative_Description__c,\n\t\tTFN__c,\n\t\tDNIS__c,\n\t\tCall_Routing_Info__c,\n\t\tUse_CM_Agent__c,\n\t\tAgent_Number__c,\n\t\tLG_Suffix__c,\n\t\tReferral_ID_Req__c,\n\t\tReferral_ID_Tool_Tip__c,\n\t\tOffer__c,\n\t\tKP_Program__c,\n\t\tEvent_SysID__c,\n\t\tcls_ad_id__c,\n\t\tPath__c,\n\t\tCID_Code__c,\n\t\tCID_Referring_URL__c,\n\t\tExtract_Date__c,\n\t\tAttribute__c\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select2\nfilterU select(mapColumn(\n\t\tADFId__c,\n\t\tIsActive,\n\t\tStartDate,\n\t\tEndDate,\n\t\tMedia_Path_Name__c,\n\t\tPromo_Id__c,\n\t\tLead_Source_Weight__c,\n\t\tProspect_Type__c,\n\t\tLOB__c,\n\t\tBUSINESS_LINE_NAME__c,\n\t\tMedia_Market__c,\n\t\tMedia_Territory_Name__c,\n\t\tmedia_type__c = { media_type__c},\n\t\tMedia_Segment_Name__c,\n\t\tProgram__c,\n\t\tName,\n\t\tLead_Source_Type__c,\n\t\tLeadSourceName__c,\n\t\tMedia_Code__c,\n\t\tMedia_Description__c,\n\t\tCreative_Code__c,\n\t\tCreative_Description__c,\n\t\tTFN__c,\n\t\tDNIS__c,\n\t\tCall_Routing_Info__c,\n\t\tUse_CM_Agent__c,\n\t\tAgent_Number__c,\n\t\tLG_Suffix__c,\n\t\tReferral_ID_Req__c,\n\t\tReferral_ID_Tool_Tip__c,\n\t\tOffer__c,\n\t\tKP_Program__c,\n\t\tEvent_SysID__c,\n\t\tcls_ad_id__c,\n\t\tPath__c,\n\t\tCID_Code__c,\n\t\tCID_Referring_URL__c,\n\t\tExtract_Date__c,\n\t\tAttribute__c\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select3\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_campaignupdate_Campaign.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertN\nSelect3 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_campaignupdate_Campaign.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> upsertU\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_campaignupdate_source_reject.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> Reject\nAddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_campaignupdate_raw.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedInbound"
+		}
+	}
+}

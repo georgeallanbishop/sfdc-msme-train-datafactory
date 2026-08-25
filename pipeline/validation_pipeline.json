@@ -1,0 +1,977 @@
+{
+	"name": "validation_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "SchemaCheckMetadata",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "schema_check_metadata.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "LookupUploadedFiles",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "sftp_inbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"env": {
+								"value": "@pipeline().parameters.env",
+								"type": "Expression"
+							},
+							"folder": "*"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "SftpReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "CheckFileName",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "AddFilenameSchemaInput",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/getInvalidFile",
+					"baseParameters": {
+						"uploaded_files": {
+							"value": "@string(variables('filename_schema'))",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "AddFilenameSchemaInput",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupUploadedFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('LookupUploadedFiles').output.childItems",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "LookupFileHeader",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "SftpReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat(pipeline().parameters.env, '/*/inbound')",
+											"type": "Expression"
+										},
+										"wildcardFileName": {
+											"value": "@item().name",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"dataset": {
+									"referenceName": "sftp_inbound_header",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": {
+											"value": "@item().name",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						},
+						{
+							"name": "AddFilenameSchema",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "LookupFileHeader",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "filename_schema",
+								"value": {
+									"value": "@concat(item().name, ':', replace(activity('LookupFileHeader').output.firstRow.Prop_0, ',', '|'))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "AddUploadedFile",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "uploaded_files",
+								"value": {
+									"value": "@item().name",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "EmailBadNames",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "CheckFileName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(activity('CheckFileName').output.runOutput.bad_name_files, ',')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "RealFile-BadName",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(length(item()),0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "EmailAlert_BadFileName",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+											"connectVia": {
+												"referenceName": "SFDCTest",
+												"type": "IntegrationRuntimeReference"
+											},
+											"body": {
+												"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', item(), '</b> file has invalid file name','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"',pipeline().globalParameters.email,'\",\"Subject\":\"',concat(item(), ' file has invalid file name in ', pipeline().parameters.env),'\"}')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "AddBadNameLog",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "log_content",
+											"value": {
+												"value": "@concat('inbound_master_piepeline', '|', pipeline().parameters.pipeline_start_time, '|', utcnow(), '|', item(), '|', 'TTEC SFTP', '|', '|Fail|Filename Issue')",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "EmailBadSchema",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "EmailBadNames",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@split(activity('CheckFileName').output.runOutput.bad_schema_files, ',')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "RealFile-BadSchema",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(length(item()),0)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "EmailAlert_SchemaNotMatch",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+											"connectVia": {
+												"referenceName": "SFDCTest",
+												"type": "IntegrationRuntimeReference"
+											},
+											"body": {
+												"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', item(), '</b> file does not match with defined schema ','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"',pipeline().globalParameters.email,'\",\"Subject\":\"',concat(item(), ' file has wrong schema in ', pipeline().parameters.env),'\"}')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "AddBadSchemaLog",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "log_content",
+											"value": {
+												"value": "@concat('inbound_master_piepeline', '|', pipeline().parameters.pipeline_start_time, '|', utcnow(), '|', item(), '|', 'TTEC SFTP', '|', '|Fail|Schema Issue')",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "MissingFile-Transformation",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "SchemaCheckMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "CheckFileCount",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('SchemaCheckMetadata').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "FileNotExists",
+							"description": "check if file listed in metadata been uploaded",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@contains(split(activity('CheckFileName').output.runOutput.missing_file_type, ','), item().FileNamePrefix)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "PassAllValidation",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "FileNotExists",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@contains(variables('valid_count_files_prefix'), replace(item().FileNamePrefix, '_', ''))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Transformation",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "transformation",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"file_name": {
+													"value": "@item().FileNamePrefix",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "EmailAlert_TransformationFail",
+										"type": "WebActivity",
+										"dependsOn": [
+											{
+												"activity": "Transformation",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+											"connectVia": {
+												"referenceName": "SFDCTest",
+												"type": "IntegrationRuntimeReference"
+											},
+											"body": {
+												"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> Transformation Failed for <b>', item().FileNamePrefix, '</b>','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"george.bishop@ttecdigital.com\",\"Subject\":\"',concat(item().FileNamePrefix, ' file was failed in Transformation process in ', pipeline().parameters.env),'\"}')",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CheckFileCount",
+				"description": "Check if actual row count match count in file name in uploaded files",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "HasNoGoodFile",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('good_schema_files')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "ValidCount",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "CheckCount",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(int(replace(last(split(item(), '_')), '.csv', '')), activity('CheckCount').output.rowsCopied)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "EmailAlert_CountNotValid",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+											"connectVia": {
+												"referenceName": "SFDCTest",
+												"type": "IntegrationRuntimeReference"
+											},
+											"body": {
+												"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', item(), '</b> file has invalid row count','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"',pipeline().globalParameters.email,'\",\"Subject\":\"',concat(item(), ' file has invalid row count in ', pipeline().parameters.env),'\"}')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "DeleteInvalidCountFile",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "inbound_raw_file",
+												"type": "DatasetReference",
+												"parameters": {
+													"file_name": {
+														"value": "@item()",
+														"type": "Expression"
+													}
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											}
+										}
+									},
+									{
+										"name": "AddBadCountLog",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "log_content",
+											"value": {
+												"value": "@concat('inbound_master_piepeline', '|', pipeline().parameters.pipeline_start_time, '|', utcnow(), '|', item(), '|', 'TTEC SFTP', '|', '|Fail|CheckSum Issue')",
+												"type": "Expression"
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "AppendFileNamePrefix",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "valid_count_files_prefix",
+											"value": {
+												"value": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(item(), '.csv', ''), '0', ''), '1', ''), '2', ''),'3',''),'4',''), '5', ''), '6', ''), '7', ''), '8', ''), '9', ''), '_', ''), '.txt', '')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "AddGoodLog",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "log_content",
+											"value": {
+												"value": "@concat('inbound_master_piepeline', '|', pipeline().parameters.pipeline_start_time, '|', utcnow(), '|', item(), '|', 'TTEC SFTP', '|', activity('CheckCount').output.rowsCopied, '||')",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "CheckCount",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "FILE_NAME",
+											"value": "$$FILEPATH"
+										}
+									],
+									"storeSettings": {
+										"type": "SftpReadSettings",
+										"maxConcurrentConnections": 3,
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat(pipeline().parameters.env, '/*/inbound/*')",
+											"type": "Expression"
+										},
+										"wildcardFileName": {
+											"value": "@item()",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false,
+										"disableChunking": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".csv"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "sftp_inbound",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().parameters.env",
+											"type": "Expression"
+										},
+										"folder": "*"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "inbound_raw_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "AddDataIssueLog",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "CheckCount",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "log_content",
+								"value": {
+									"value": "@concat('inbound_master_piepeline', '|', pipeline().parameters.pipeline_start_time, '|', utcnow(), '|', item(), '|', 'TTEC SFTP', '|', '|Fail|Data attributes does not match header columns')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "EmailAlert_DataAttributeIssue",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "AddDataIssueLog",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+								"connectVia": {
+									"referenceName": "SFDCTest",
+									"type": "IntegrationRuntimeReference"
+								},
+								"body": {
+									"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', item(), '</b> file data attributes do not match header columns ','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"',pipeline().globalParameters.email,'\",\"Subject\":\"',concat(item(), ' file data attributes do not match header columns ', pipeline().parameters.env),'\"}')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ArchiveInbound",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "CheckFileCount",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "archive_inbound",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"folders": {
+							"value": "@createArray('campaignfiles','kpif','kpma','medicaid','epsilon','kpwa','veritas')",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().parameters.env",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "CreatePipelineLog",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "ArchiveInbound",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/createPipelineLog",
+					"baseParameters": {
+						"log_content": {
+							"value": "@string(variables('log_content'))",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().parameters.env",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "HasNoGoodFile",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "CheckFileName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('CheckFileName').output.runOutput.good_schema_files, '')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "GoodSchemaFiles",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "good_schema_files",
+								"value": {
+									"value": "@split(activity('CheckFileName').output.runOutput.good_schema_files, ',')",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "NoGoodFile",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "good_schema_files",
+								"value": []
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SetIdleFiles",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "CheckFileName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "idle_files",
+					"value": {
+						"value": "@split(activity('CheckFileName').output.runOutput.idle_files, ',')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "DeleteSFTPFiles",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "ArchiveInbound",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "MissingFile-Transformation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "delete_sftp_file",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"uploaded_files": {
+							"value": "@variables('uploaded_files')",
+							"type": "Expression"
+						},
+						"idle_files": {
+							"value": "@variables('idle_files')",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().globalParameters.env",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"env": {
+				"type": "string",
+				"defaultValue": "uat"
+			},
+			"emails": {
+				"type": "string",
+				"defaultValue": "chris.gehn@kp.org,mtss-kpitsupport@kp.org,george.bishop@ttec.com,cheryl.stewart@ttec.com,siyu.liu@ttec.com"
+			},
+			"pipeline_start_time": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"filename_schema": {
+				"type": "Array"
+			},
+			"good_schema_files": {
+				"type": "Array"
+			},
+			"valid_count_files_prefix": {
+				"type": "Array"
+			},
+			"uploaded_files": {
+				"type": "Array"
+			},
+			"log_content": {
+				"type": "Array"
+			},
+			"idle_files": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

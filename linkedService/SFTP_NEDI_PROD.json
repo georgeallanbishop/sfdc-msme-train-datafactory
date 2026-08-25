@@ -1,0 +1,31 @@
+{
+	"name": "SFTP_NEDI_PROD",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "Sftp",
+		"typeProperties": {
+			"host": "ftp-edi01.kp.org",
+			"port": 22,
+			"skipHostKeyValidation": true,
+			"authenticationType": "SshPublicKey",
+			"userName": "EDIgQKS8",
+			"privateKeyContent": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "nedi-secret"
+			},
+			"passPhrase": {
+				"type": "SecureString",
+				"value": "**********"
+			}
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

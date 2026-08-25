@@ -1,0 +1,220 @@
+{
+	"name": "ib_kpma_callbacks",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "Toreject"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "Toinsert"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curratedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "ToUpdate"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ADFID"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "insert"
+				},
+				{
+					"name": "split1"
+				},
+				{
+					"name": "update"
+				},
+				{
+					"name": "RejectReason"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "split2"
+				},
+				{
+					"name": "selectInsert"
+				},
+				{
+					"name": "SelectReject"
+				},
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          ACTION as string,",
+				"          SF_CONTACT_ID as string,",
+				"          SF_OPPORTUNITY_ID as string,",
+				"          DATE_TIME as string,",
+				"          SUBJECT as string,",
+				"          PRIORITY as string,",
+				"          REGION as string,",
+				"          CALL_REASON as string,",
+				"          AGENT_ID as string,",
+				"          TASK_ID as string,",
+				"          STATUS as string,",
+				"          RECORDTYPE as string,",
+				"          FILE_NAME as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     wildcardPaths:['raw/ib_kpma_callbacks*']) ~> source1",
+				"source1 derive(ADFId__c = uuid()) ~> ADFID",
+				"RejectReason select(mapColumn(",
+				"          ADFId__c,",
+				"          REJECT_REASON",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"split1@Insert filter(ACTION =='A') ~> insert",
+				"derivedColumn1 split(ACTION == 'A',",
+				"     ACTION =='U',",
+				"     disjoint: false) ~> split1@(Insert, update)",
+				"split1@update filter(ACTION =='U') ~> update",
+				"split2@reject derive(REJECT_REASON = concat(\r",
+				"        iif((isNull(SF_CONTACT_ID)&&(upper(ACTION)=='A'))||(isNull(SF_OPPORTUNITY_ID)&&(upper(ACTION)=='A'))||(isNull(DATE_TIME)&&(upper(ACTION)=='A'))||(isNull(SUBJECT)&&(upper(ACTION)=='A'))||(isNull(PRIORITY)&&(upper(ACTION)=='A'))||(isNull(REGION)&&(upper(ACTION) == 'A'))||(isNull(CALL_REASON)&&(upper(ACTION) == 'A'))||(isNull(AGENT_ID)&&(upper(ACTION) == 'A')),\r",
+				"           concat('ADF:REQUIRED FIELD MISSING FOR ACTION_CODE A: ', iif(isNull({SF_CONTACT_ID}), 'SF_CONTACT_ID - ', ''), iif(isNull({SF_OPPORTUNITY_ID}), 'SF_OPPORTUNITY_ID - ', ''), iif(isNull({DATE_TIME}), 'DATE_TIME - ', ''), iif(isNull(SUBJECT), 'SUBJECT - ', ''),iif(isNull(PRIORITY), 'PRIORITY - ', ''),iif(isNull(REGION), 'REGION -', ''),iif(isNull(CALL_REASON), 'CALL_REASON ', '')), ' ')\r",
+				"            ,\r",
+				"             \r",
+				"             iif(not(in(['A', 'U'], upper(ACTION)))||isNull(ACTION),\r",
+				"           concat('ADF:INVALID Action. Expected ACTION_CODE = A or U. Received Action = ', iif(isNull(ACTION), 'NULL', ACTION), ' '), \r",
+				"           '')\r",
+				"             ,\r",
+				"             \r",
+				"             iif(isNull(ACTION)||isNull({STATUS})||isNull(RECORDTYPE)|| isNull(AGENT_ID), \r",
+				"           concat('ADF:REQUIRED FIELD MISSING: ', iif(isNull(ACTION), 'Action - ', ''), iif(isNull(STATUS), 'Status - ', ''), iif(isNull(RECORDTYPE), 'RecordType - ', ''),iif(isNull(AGENT_ID), 'Agent ID - ', '')), \r",
+				"           '')\r",
+				"      ,\r",
+				"      \r",
+				"      iif((upper(STATUS)!='COMPLETED'&&upper(STATUS)!='CANCELLED') &&(upper(ACTION) == 'U'), 'ADF:Incorrect status for action code U: ', '')\r",
+				"      ,\r",
+				"      iif(upper(STATUS)!='REQUESTED'&&(upper(ACTION) == 'A'), 'ADF:Incorrect status for action code A: ','')\r",
+				"      \r",
+				"      ,iif(upper(ACTION) == 'U'&&isNull(TASK_ID),'ADF: Msissing task id for update', '')\r",
+				"             )) ~> RejectReason",
+				"split2@insert select(mapColumn(",
+				"          ADFId__c,",
+				"          WhoId = SF_CONTACT_ID,",
+				"          WhatId = SF_OPPORTUNITY_ID,",
+				"          ReminderDateTime = DATE_TIME,",
+				"          Subject = SUBJECT,",
+				"          Priority = PRIORITY,",
+				"          Region__C = REGION,",
+				"          Notes__c = CALL_REASON,",
+				"          OwnerId = AGENT_ID,",
+				"          Id = TASK_ID,",
+				"          Status = STATUS,",
+				"          RecordTypeId = RECORDTYPE,",
+				"          ACTION",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"ADFID split(isNull(ACTION)|| isNull(STATUS)||isNull(RECORDTYPE)||isNull(AGENT_ID) || isNull(SF_CONTACT_ID)&&(upper(ACTION)=='A') ||isNull(SF_OPPORTUNITY_ID)&&(upper(ACTION)=='A')||(upper(ACTION)=='A')&&isNull(DATE_TIME)||isNull(SUBJECT)&&(upper(ACTION)=='A')||isNull(REGION)&&(upper(ACTION) == 'A')||isNull(CALL_REASON)&&(upper(ACTION) == 'A')\r",
+				"||not(in(['A', 'U'], upper(ACTION)))||(upper(ACTION) == 'U')&&(upper(STATUS)!='COMPLETED')&&(upper(STATUS)!='CANCELLED')||(upper(ACTION) == 'A')&&(upper(STATUS)!='REQUESTED') || isNull(TASK_ID)&&(upper(ACTION)=='U'),",
+				"     disjoint: false) ~> split2@(reject, insert)",
+				"insert select(mapColumn(",
+				"          ADFId__c,",
+				"          WhoId,",
+				"          WhatId,",
+				"          ReminderDateTime,",
+				"          Subject,",
+				"          Priority,",
+				"          Region__C,",
+				"          Notes__C = Notes__c,",
+				"          OwnerId,",
+				"          Id,",
+				"          Status,",
+				"          RecordTypeId,",
+				"          ActivityDate,",
+				"          isReminderSet",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectInsert",
+				"update select(mapColumn(",
+				"          ADFId__c,",
+				"          WhoId,",
+				"          WhatId,",
+				"          ReminderDateTime,",
+				"          Subject,",
+				"          Priority,",
+				"          Region__C,",
+				"          Notes__C = Notes__c,",
+				"          OwnerId,",
+				"          Id,",
+				"          Status,",
+				"          RecordTypeId",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> SelectReject",
+				"select2 derive(ReminderDateTime = coalesce(toString(toTimestamp(ReminderDateTime, 'yyyy-MM-dd HH:mm:ss')),ReminderDateTime),",
+				"          ActivityDate = coalesce(toString(toDate(toTimestamp(ReminderDateTime, 'yyyy-MM-dd HH:mm:ss'))), split(ReminderDateTime, ' ')[1]),",
+				"          isReminderSet = 'true') ~> derivedColumn1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['ib_kpma_callbacks_source_reject.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> Toreject",
+				"selectInsert sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['ib_kpma_callbacks_Task.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> Toinsert",
+				"ADFID sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['ib_kpma_callbacks_raw.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> curratedRaw",
+				"SelectReject sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     partitionFileNames:['ib_kpma_callbacks_Task.csv'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> ToUpdate"
+			]
+		}
+	}
+}

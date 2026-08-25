@@ -1,0 +1,265 @@
+{
+	"name": "update_phone_pref_new_contact",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetPTCContact",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceSource",
+						"additionalColumns": [
+							{
+								"name": "Source",
+								"value": "Contact"
+							},
+							{
+								"name": "Home_Phone__c",
+								"value": "$$COLUMN:HomePhone"
+							},
+							{
+								"name": "Other_Phone__c",
+								"value": "$$COLUMN:OtherPhone"
+							}
+						],
+						"query": {
+							"value": "@concat('SELECT Id, HomePhone, OtherPhone, Phone, MobilePhone, PTC__c, PTC_Scope__c, PTC_Source__c, PTC_Modified_Date__c, PTC_Expiration__c FROM Contact WHERE LastModifiedDate >', pipeline().parameters.last_modified_time)",
+							"type": "Expression"
+						},
+						"readBehavior": "query"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ""
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SFDC_test",
+						"type": "DatasetReference",
+						"parameters": {
+							"api_name": "Contact"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "insert_phone_preferences_contact.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "GetPTCLead",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceSource",
+						"additionalColumns": [
+							{
+								"name": "Source",
+								"value": "Lead"
+							},
+							{
+								"name": "HomePhone",
+								"value": "$$COLUMN:Home_Phone__c"
+							},
+							{
+								"name": "OtherPhone",
+								"value": "$$COLUMN:Other_Phone__c"
+							}
+						],
+						"query": {
+							"value": "@concat('SELECT Id, Home_Phone__c, Other_Phone__c, Phone, MobilePhone, PTC__c, PTC_Scope__c, PTC_Source__c, PTC_Modified_Date__c, PTC_Expiration__c FROM Lead WHERE LastModifiedDate > ', pipeline().parameters.last_modified_time)",
+							"type": "Expression"
+						},
+						"readBehavior": "query"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ""
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SFDC_test",
+						"type": "DatasetReference",
+						"parameters": {
+							"api_name": "Lead"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "insert_phone_preferences_lead.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "phone_preferences",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "GetPTCLead",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "GetPTCContact",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "insert_phone_preferences",
+						"type": "DataFlowReference"
+					},
+					"integrationRuntime": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "InsertPhonePref",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "phone_preferences",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "insert_to_sfdc",
+							"wildcardFileName": "ptc_Phone_Preferences__c.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SalesforceSink",
+						"writeBatchSize": 5000,
+						"writeBehavior": "insert"
+					},
+					"enableStaging": false,
+					"enableSkipIncompatibleRow": true,
+					"logSettings": {
+						"enableCopyActivityLog": true,
+						"copyActivityLogSettings": {
+							"logLevel": "Info",
+							"enableReliableLogging": false
+						},
+						"logLocationSettings": {
+							"linkedServiceName": {
+								"referenceName": "SFDC_storage_gen2",
+								"type": "LinkedServiceReference"
+							},
+							"path": "auditlogs/error_log/insert_phone_preferences"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SFDC_test",
+						"type": "DatasetReference",
+						"parameters": {
+							"api_name": "Phone_Preferences__c"
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"last_modified_time": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,42 @@
+{
+	"name": "update_increamental_load_metadata",
+	"properties": {
+		"folder": {
+			"name": "export"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateMetadata"
+				},
+				{
+					"dataset": {
+						"referenceName": "metadata_archive",
+						"type": "DatasetReference"
+					},
+					"name": "ArchiveMetadata"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DerivedColumn1"
+				}
+			],
+			"script": "parameters{\n\tlast_update_time as string\n}\nsource(output(\n\t\tSalesforceObject as string,\n\t\tQuery as string,\n\t\tLastUpdateTime as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['increamental_load_metadata.csv']) ~> source1\nsource1 derive(LastUpdateTime = $last_update_time) ~> DerivedColumn1\nDerivedColumn1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\t{FileNamePrefix|CadenceExpected|ExpectedTime|EmailAlertsTo|SalesforceObject|Operation|PipelineName} as string\n\t),\n\tpartitionFileNames:['increamental_load_metadata.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> UpdateMetadata\nsource1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('increamental_load_metadata_', replace(regexReplace($last_update_time, `[-:]`, ''), ' ', '_'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> ArchiveMetadata"
+		}
+	}
+}

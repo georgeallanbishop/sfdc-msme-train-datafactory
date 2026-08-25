@@ -1,0 +1,361 @@
+{
+	"name": "AgentLicensing_medicare",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get lincense data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Delete agent data",
+						"dependencyConditions": [
+							"Completed"
+						]
+					},
+					{
+						"activity": "Delete ob alsm data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Delete user data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceSource",
+						"query": "SELECT User__r.IsActive ,User__r.Id,User__r.FirstName,User__r.LastName,User__r.Email, User__r.Agent_NPN__c,User__r.Phone,Active__c,State_License_Number__c,State__c FROM Licensing__c",
+						"readBehavior": "query"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SF_UAT",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Licensing__c"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "inbound_sf_licensing",
+						"type": "DatasetReference",
+						"parameters": {
+							"filename": "licensing_raw"
+						}
+					}
+				]
+			},
+			{
+				"name": "Delete agent data",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "inbound_sf_licensing_delete",
+						"type": "DatasetReference"
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "sfdcdataxchange",
+							"type": "LinkedServiceReference"
+						},
+						"path": "auditlogs/salesforce_license_export"
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "licensing_*",
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "Change Column Name",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Get user data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [
+					{
+						"name": "recrd_ct",
+						"value": "@activity('Get lincense data').output.rowsCopied"
+					}
+				],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "agent_licening_df",
+						"type": "DataFlowReference",
+						"parameters": {
+							"record_count_l": {
+								"value": "@activity('Get lincense data').output.rowsCopied",
+								"type": "Expression"
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "Deliver Lincense Data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Change Column Name",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "salesforce_license",
+							"wildcardFileName": {
+								"value": "ob_almsdata*",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "SftpWriteSettings",
+							"operationTimeout": "01:00:00",
+							"useTempFileRename": true
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "inbound_sf_licencing_curated",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "sftp_outbound_license",
+						"type": "DatasetReference",
+						"parameters": {
+							"lic_env": "@pipeline().globalParameters.lic_env"
+						}
+					}
+				]
+			},
+			{
+				"name": "Delete ob alsm data",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "inbound_sf_licensing_delete",
+						"type": "DatasetReference"
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "sfdcdataxchange",
+							"type": "LinkedServiceReference"
+						},
+						"path": "auditlogs/salesforce_license_export"
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "ob_almsdata*",
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "Get user data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Get lincense data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceSource",
+						"query": "SELECT IsActive ,id,FirstName,LastName,Email,Agent_NPN__c,phone,department from user",
+						"readBehavior": "query"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SF_UAT",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "user"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "inbound_sf_licensing",
+						"type": "DatasetReference",
+						"parameters": {
+							"filename": "user_raw"
+						}
+					}
+				]
+			},
+			{
+				"name": "Delete user data",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "inbound_sf_licensing_delete",
+						"type": "DatasetReference"
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "sfdcdataxchange",
+							"type": "LinkedServiceReference"
+						},
+						"path": "auditlogs/salesforce_license_export"
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "agent_*",
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"variables": {
+			"rec_ct": {
+				"type": "String",
+				"defaultValue": "0"
+			}
+		},
+		"folder": {
+			"name": "export"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,804 @@
+{
+	"name": "transformation",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switch1",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.file_name",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "ib_kpma_meeting_venue",
+							"activities": [
+								{
+									"name": "ib_kpma_meeting_venue",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_meeting_venue",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_client_agility_data",
+							"activities": [
+								{
+									"name": "ib_client_agility_data",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_client_agility_data",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_CampaignUpdate",
+							"activities": [
+								{
+									"name": "kpma_CampaignUpdate",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "CampaignUpdate_kpma",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_contact_update",
+							"activities": [
+								{
+									"name": "ib_kpma_contact_update",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_contact_update",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_contactnote",
+							"activities": [
+								{
+									"name": "ib_kpma_contactnote",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_contactnote",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_new_contact",
+							"activities": [
+								{
+									"name": "ib_kpma_new_contact",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_new_contact",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_oppstatus",
+							"activities": [
+								{
+									"name": "ib_kpma_oppstatus",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_oppstatus",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_seminar_ca",
+							"activities": [
+								{
+									"name": "ib_kpma_seminar_ca",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_seminar_ca",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_seminar_update",
+							"activities": [
+								{
+									"name": "ib_kpma_seminar_update",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_seminar_update",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_onlineRSVP",
+							"activities": [
+								{
+									"name": "ib_kpma_onlineRSVP",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_onlineRSVP",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_fulfillment",
+							"activities": [
+								{
+									"name": "ib_kpma_fulfillment",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_fulfillment",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_ship_conf",
+							"activities": [
+								{
+									"name": "ib_kpma_ship_conf",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_ship_conf",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "KPIF_Recon",
+							"activities": [
+								{
+									"name": "KPIF_Recon",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "KPIF_Recon",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_sch_calls",
+							"activities": [
+								{
+									"name": "ib_kpma_sch_calls",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_sch_calls",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_campaignupdate",
+							"activities": [
+								{
+									"name": "kpif_CampaignUpdate",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_campaignupdate",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_customerid_sync",
+							"activities": [
+								{
+									"name": "ib_customerid_sync",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_customerid_sync",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "KPWA_MemberAddress",
+							"activities": [
+								{
+									"name": "KPWA_MemberAddress",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpwa_MemberAddress",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "KPWA_MemberContracts",
+							"activities": [
+								{
+									"name": "KPWA_MemberContracts",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpwa_MemberContracts",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "KPWA_Members",
+							"activities": [
+								{
+									"name": "KPWA_Members",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpwa_Members",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "SEP_Candidate_Import",
+							"activities": [
+								{
+									"name": "Sep_Candidate_Import",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "Sep_Candidate_Import",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_ind_kpaol_leads",
+							"activities": [
+								{
+									"name": "ib_ind_kpaol_leads",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_ind_kpaol_leads",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_medicaid_referral",
+							"activities": [
+								{
+									"name": "ib_medicaid_referral",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_medicaid_referral",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_mscc_referral",
+							"activities": [
+								{
+									"name": "ib_mscc_referral",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpif_mscc_referral",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_lead_update",
+							"activities": [
+								{
+									"name": "ib_lead_update",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_lead_update",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						},
+						{
+							"value": "ib_kpma_callbacks",
+							"activities": [
+								{
+									"name": "ib_kpma_callbacks",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_callbacks",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Switch2",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.file_name",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "ib_kpma_campaign_member",
+							"activities": [
+								{
+									"name": "ib_kpma_campaign_member",
+									"type": "ExecuteDataFlow",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataflow": {
+											"referenceName": "ib_kpma_campaign_member",
+											"type": "DataFlowReference"
+										},
+										"integrationRuntime": {
+											"referenceName": "SFDCTest",
+											"type": "IntegrationRuntimeReference"
+										},
+										"traceLevel": "Fine"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"file_name": {
+				"type": "string"
+			},
+			"campaign_email_alert_list": {
+				"type": "string",
+				"defaultValue": "smit.patil@ttec.com"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:46Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,64 @@
+{
+	"name": "create_reject_file",
+	"properties": {
+		"folder": {
+			"name": "post_import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "error_log",
+						"type": "DatasetReference"
+					},
+					"name": "errorReject"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "sourceReject"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "reject_files",
+						"type": "DatasetReference"
+					},
+					"name": "FinalReject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Union1"
+				},
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "DerivedColumn2"
+				}
+			],
+			"script": "parameters{\n\tcreate_time as string ('20220318'),\n\tfilename_prefix as string ('ib_kpma_callbacks'),\n\toutput_prefix as string ('ob_kpma_callbacks')\n}\nsource(output(\n\t\tTimestamp as string,\n\t\tLevel as string,\n\t\tOperationName as string,\n\t\tOperationItem as string,\n\t\tMessage as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: true,\n\tmodifiedAfter: (toTimestamp($create_time, 'yyyy-MM-dd\\'T\\'HH:mm:ss')),\n\twildcardPaths:[(concat('error_log/', $filename_prefix, '/*/*/*/*.txt'))]) ~> errorReject\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: true,\n\twildcardPaths:[(concat('reject_map/', $filename_prefix, '*'))]) ~> sourceReject\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:[(concat('curated/', $filename_prefix, '*'))]) ~> curatedRaw\nerrorReject filter(OperationName == 'TabularRowSkip') ~> Filter1\nFilter1 derive(ADFId__c = split(replace(OperationItem, '\"', ''), ',')[1]) ~> DerivedColumn1\nDerivedColumn1 select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON = Message\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nsourceReject, Select1 union(byName: true)~> Union1\nDerivedColumn2, Union1 join(DerivedColumn2@ADFId__c == Union1@ADFId__c,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> Join1\ncuratedRaw derive(ADFId__c = toString(byName('ADFId__c')),\n\t\tFILE_NAME = replace(replace(concat('reject_files/', split(byName('FILE_NAME'), '/')[4]), '.csv', '_reject.csv'), 'ib_', 'ob_')) ~> DerivedColumn2\nJoin1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\trowUrlColumn:'FILE_NAME',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tquoteAll: true,\n\tmapColumn(\n\t\teach(match(name!='ADFId__c'))\n\t)) ~> FinalReject"
+		}
+	}
+}

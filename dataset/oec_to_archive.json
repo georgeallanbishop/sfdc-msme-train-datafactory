@@ -1,0 +1,24 @@
+{
+	"name": "oec_to_archive",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFDC_storage_gen2",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "OEC_export_archive",
+				"fileSystem": "outbound"
+			},
+			"columnDelimiter": "\u0001",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

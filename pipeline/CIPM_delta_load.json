@@ -1,0 +1,509 @@
+{
+	"name": "CIPM_delta_load",
+	"properties": {
+		"description": "connection to cisco hds",
+		"activities": [
+			{
+				"name": "DeltaLoadMetadataTable",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "SetRunDateSuffix",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SetRunDatetime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "cipm*"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata_comma",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "deltaLoadForEachTable",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "DeltaLoadMetadataTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('DeltaLoadMetadataTable').output.value",
+						"type": "Expression"
+					},
+					"batchCount": 6,
+					"activities": [
+						{
+							"name": "delta_copy",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "delta_query",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SalesforceSource",
+									"additionalColumns": [
+										{
+											"name": "kare_mod_date",
+											"value": {
+												"value": "@utcnow()",
+												"type": "Expression"
+											}
+										}
+									],
+									"query": {
+										"value": "@replace(replace(replace(replace(string(activity('delta_query').output.value[0]),'\"col\":',''),'\"',''),'{',''),'}','')",
+										"type": "Expression"
+									},
+									"readBehavior": "query"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"parallelCopies": 10,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "SF_UAT",
+									"type": "DatasetReference",
+									"parameters": {
+										"object": "Contact"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "CIPM_Source",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": {
+											"value": "@replace(concat(item().object_name, '.snappy.parquet'),'`','')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "delta_variable",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "delta_copy",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "file_info",
+								"value": {
+									"value": "@replace(concat(item().object_name,'|',item().watermark_column_name,'|',activity('delta_copy').output.dataRead,'|',activity('delta_copy').output.dataWritten,'|',activity('delta_copy').output.rowsRead,'|',activity('delta_copy').output.rowsCopied,'|','','|',activity('delta_copy').output.executionDetails[0].status,'|',activity('delta_copy').output.executionDetails[0].start,'|',activity('delta_copy').output.executionDetails[0].duration,'|','cisco-',item().object_name,'-',replace(replace(pipeline().parameters.windowStart,'-',''),':',''),'-to-',replace(replace(pipeline().parameters.windowEnd,'-',''),':',''),'.snappy.parquet','|',item().load_table,'|',item().delta_transaction_category),'`','')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "delta_query",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": "query_files",
+										"wildcardFileName": {
+											"value": "@replace(item().object_name, '`', '')",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"dataset": {
+									"referenceName": "metadata_comma",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "updateDeltaTables",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "deltaLoadForEachTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "LookupLastUpdate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/Export/Update Delta Tables",
+					"baseParameters": {
+						"AzurePipeLineLog": {
+							"value": "@string(variables('file_info'))",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().globalParameters.env",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SetRunDateSuffix",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_datetime_suffix",
+					"value": {
+						"value": "@formatDateTime(pipeline().TriggerTime, 'yyyyMMdd_HHmmss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SetRunDatetime",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_datetime",
+					"value": {
+						"value": "@formatDateTime(pipeline().TriggerTime, 'yyyy-MM-dd 00:00:00')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "LookupLastUpdate",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "cimp_metadata.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "exportData",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "updateDeltaTables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/Export/Export Customer Transaction",
+					"baseParameters": {
+						"run_datetime": {
+							"value": "@variables('run_datetime')",
+							"type": "Expression"
+						},
+						"run_datetime_suffix": {
+							"value": "@variables('run_datetime_suffix')",
+							"type": "Expression"
+						},
+						"last_update_time": {
+							"value": "@activity('LookupLastUpdate').output.firstRow.LastUpdateDatetime",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().globalParameters.env",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Upload2SFTP",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "exportData",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "CIMP_export_files",
+							"wildcardFileName": {
+								"value": "@concat('cimp_export_', variables('run_datetime_suffix'), '.*')",
+								"type": "Expression"
+							},
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "SftpWriteSettings",
+							"operationTimeout": "01:00:00",
+							"useTempFileRename": true
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "export_files",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "sftp_outbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"env": {
+								"value": "@pipeline().globalParameters.env",
+								"type": "Expression"
+							},
+							"folder": "epsilon/outbound",
+							"filename": {
+								"value": "@concat(formatDateTime(pipeline().TriggerTime, 'yyyyMMdd'),'.consumerconnect.customer.di')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "UpdateMetadata",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Upload2SFTP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "update_export_metadata_cimp",
+						"type": "DataFlowReference",
+						"parameters": {
+							"last_update_time": {
+								"value": "'@{variables('run_datetime')}'",
+								"type": "Expression"
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"windowStart": {
+				"type": "string",
+				"defaultValue": "2016-01-01T23:00:00Z"
+			},
+			"windowEnd": {
+				"type": "string",
+				"defaultValue": "2021-04-27T23:00:00Z"
+			}
+		},
+		"variables": {
+			"file_info": {
+				"type": "Array"
+			},
+			"run_datetime_suffix": {
+				"type": "String"
+			},
+			"run_datetime": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "export"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

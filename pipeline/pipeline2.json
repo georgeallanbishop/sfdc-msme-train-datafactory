@@ -1,0 +1,48 @@
+{
+	"name": "pipeline2",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delete ob alsm data",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "inbound_sf_licensing",
+						"type": "DatasetReference",
+						"parameters": {
+							"filename": {
+								"value": "ob_almsdata_*",
+								"type": "Expression"
+							}
+						}
+					},
+					"logStorageSettings": {
+						"linkedServiceName": {
+							"referenceName": "sfdcdataxchange",
+							"type": "LinkedServiceReference"
+						},
+						"path": "auditlogs/salesforce_license_export"
+					},
+					"enableLogging": true,
+					"storeSettings": {
+						"type": "AzureBlobStorageReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

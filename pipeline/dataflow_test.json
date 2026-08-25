@@ -1,0 +1,268 @@
+{
+	"name": "dataflow_test",
+	"properties": {
+		"activities": [
+			{
+				"name": "createRejectFile",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "If Insert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "If Upsert",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "create_reject_file",
+						"type": "DataFlowReference",
+						"parameters": {
+							"create_time": {
+								"value": "'@{substring(pipeline().TriggerTime, 0, 19)}'",
+								"type": "Expression"
+							},
+							"filename_prefix": {
+								"value": "'@{pipeline().parameters.filename_prefix}'",
+								"type": "Expression"
+							},
+							"output_prefix": {
+								"value": "'@{replace(pipeline().parameters.filename_prefix, 'ib_', 'ob_')}'",
+								"type": "Expression"
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "If Insert",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.insert, 't')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "insert",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": "insert_to_sfdc",
+										"wildcardFileName": {
+											"value": "@concat(pipeline().parameters.filename_prefix, '_', pipeline().parameters.object, '*')",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SalesforceSink",
+									"writeBatchSize": 5000,
+									"writeBehavior": "insert",
+									"ignoreNullValues": false
+								},
+								"enableStaging": false,
+								"enableSkipIncompatibleRow": true,
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Info",
+										"enableReliableLogging": true
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "SFDC_storage_gen2",
+											"type": "LinkedServiceReference"
+										},
+										"path": {
+											"value": "@concat('auditlogs/error_log/', pipeline().parameters.filename_prefix, '/')",
+											"type": "Expression"
+										}
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "insert_to_sfdc",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SFDC_test",
+									"type": "DatasetReference",
+									"parameters": {
+										"api_name": {
+											"value": "@pipeline().parameters.object",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "If Upsert",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.upsert, 't')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "upsert",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": "upsert_to_sfdc",
+										"wildcardFileName": {
+											"value": "@concat(pipeline().parameters.filename_prefix, '_', pipeline().parameters.object, '*')",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "SalesforceSink",
+									"writeBatchSize": 5000,
+									"writeBehavior": "upsert",
+									"externalIdFieldName": "Id",
+									"ignoreNullValues": true
+								},
+								"enableStaging": false,
+								"enableSkipIncompatibleRow": true,
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Info",
+										"enableReliableLogging": true
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "SFDC_storage_gen2",
+											"type": "LinkedServiceReference"
+										},
+										"path": {
+											"value": "@concat('auditlogs/error_log/', pipeline().parameters.filename_prefix, '/')",
+											"type": "Expression"
+										}
+									}
+								},
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "upsert_to_sfdc",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "SFDC_test",
+									"type": "DatasetReference",
+									"parameters": {
+										"api_name": {
+											"value": "@pipeline().parameters.object",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"filename_prefix": {
+				"type": "string"
+			},
+			"object": {
+				"type": "string"
+			},
+			"insert": {
+				"type": "string"
+			},
+			"upsert": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

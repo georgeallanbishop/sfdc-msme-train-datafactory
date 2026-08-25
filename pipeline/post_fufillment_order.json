@@ -1,0 +1,174 @@
+{
+	"name": "post_fufillment_order",
+	"properties": {
+		"activities": [
+			{
+				"name": "getId",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceV2Source",
+						"SOQLQuery": {
+							"value": "@concat('SELECT Id, ADFId__c FROM Fulfillment_Orders__c WHERE CreatedDate > ', pipeline().parameters.pipeline_start_time)",
+							"type": "Expression"
+						},
+						"includeDeletedObjects": false
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Fulfillment_Orders__c"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "intermediate_raw_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "fulfillment_orders_id.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "insert_fulfillment_order_line_items",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "getId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "insert_fulfillment_orders_line_items",
+						"type": "DataFlowReference"
+					},
+					"integrationRuntime": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "Insert",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "insert_fulfillment_order_line_items",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "insert_to_sfdc",
+							"wildcardFileName": "insert_Fulfillment_Orders_Line_Items__c.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SalesforceV2Sink",
+						"writeBatchSize": 100000,
+						"writeBehavior": "insert"
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "salesforce_object",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Fulfillment_Orders_Line_Items__c"
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"pipeline_start_time": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:45Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

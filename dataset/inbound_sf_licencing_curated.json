@@ -1,0 +1,29 @@
+{
+	"name": "inbound_sf_licencing_curated",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "sfdcdataxchange",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "salesforce_license",
+				"container": "inbound"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "Id|Contact__r.Customer_Id__c|Contact__r.Id|Contact__r.Type__c|Preferred_Spoken_Language__c|OTN__c|Contact__r.FirstName|Contact__r.middle_initial__c|Contact__r.LastName|Contact__r.OtherStreet|Contact__r.OtherCity|Contact__r.OtherState|Contact__r.OtherPostalCode|Contact__r.Birthdate|Contact__r.HomePhone|Contact__r.MailingStreet|Contact__r.MailingCity|Contact__r.MailingState|Contact__r.MailingPostalCode|Agent_NPN__c|Agent_Lic_State__c|Agent_Licensed__c|Owner.Id|Owner.Name|Owner.Phone|Owner.Email|Method__c",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

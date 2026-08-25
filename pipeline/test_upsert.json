@@ -1,0 +1,87 @@
+{
+	"name": "test_upsert",
+	"properties": {
+		"activities": [
+			{
+				"name": "updateProcessStatus",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "OEC_export_files",
+							"wildcardFileName": "export_complete_update_kpma.*",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "SalesforceSink",
+						"writeBatchSize": 100,
+						"writeBehavior": "upsert",
+						"externalIdFieldName": "Id",
+						"ignoreNullValues": true
+					},
+					"enableStaging": false,
+					"parallelCopies": 2,
+					"enableSkipIncompatibleRow": true,
+					"validateDataConsistency": true,
+					"logSettings": {
+						"enableCopyActivityLog": true,
+						"copyActivityLogSettings": {
+							"logLevel": "Warning",
+							"enableReliableLogging": true
+						},
+						"logLocationSettings": {
+							"linkedServiceName": {
+								"referenceName": "SFDC_storage_gen2",
+								"type": "LinkedServiceReference"
+							},
+							"path": "gblogs"
+						}
+					},
+					"dataIntegrationUnits": 2,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "oec_export_compete_update",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "SF_UAT",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "Enrollment__c"
+						}
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:44Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

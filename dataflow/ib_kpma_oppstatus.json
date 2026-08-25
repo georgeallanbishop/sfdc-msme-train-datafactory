@@ -1,0 +1,90 @@
+{
+	"name": "ib_kpma_oppstatus",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "RecordTypeId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "upsertOutput"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "rejectOUTPUT"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertOutput"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "rejectREASON"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "ConditionalSplit2"
+				},
+				{
+					"name": "DerivedColumn3"
+				},
+				{
+					"name": "Select3"
+				},
+				{
+					"name": "Join1"
+				}
+			],
+			"script": "source(output(\n\t\tPIPE_OPP_UID as string,\n\t\tSTATUS as string,\n\t\tREASON as string,\n\t\tSTATUS_DATE as string,\n\t\tClose_Date as string,\n\t\tContactId as string,\n\t\tOwnerId as string,\n\t\t{Opportunity Name} as string,\n\t\tRecordTypeId as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_oppstatus*']) ~> source1\nsource(output(\n\t\tRecordTypeId as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/opp_record_type_id.csv']) ~> RecordTypeId\nDerivedColumn1 split((isNull(PIPE_OPP_UID)&&(isNull(ContactId)||isNull(OwnerId)||isNull({Opportunity Name})))||isNull(STATUS)||isNull(STATUS_DATE)||isNull(Close_Date),\n\tdisjoint: false) ~> ConditionalSplit1@(rejectNULL, toSFDC)\nsource1 derive(ADFId__c = uuid()) ~> DerivedColumn1\nDerivedColumn2 select(mapColumn(\n\t\tADFId__c,\n\t\tId = PIPE_OPP_UID,\n\t\tStageName = STATUS,\n\t\tReason_Lost__c = REASON,\n\t\tStatus_Date__c = STATUS_DATE,\n\t\tCloseDate = Close_Date,\n\t\tPrimary_Contact__c = ContactId,\n\t\tOwnerId,\n\t\tName = {Opportunity Name},\n\t\tRecordTypeId\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit1@rejectNULL derive(REJECT_REASON = concat('ADF:Field contain NULL value: ', iif(isNull(STATUS), 'STATUS ', ''), iif(isNull(STATUS_DATE), 'STATUS_DATE ', ''), iif(isNull(PIPE_OPP_UID)&&isNull(ContactId), 'ContactId ', ''), iif(isNull(Close_Date), 'Close_Date ', ''), iif(isNull(PIPE_OPP_UID)&&isNull(OwnerId), 'OwnerId ', ''), iif(isNull(PIPE_OPP_UID)&&isNull({Opportunity Name}), 'Opportunity Name', ''))) ~> rejectREASON\nrejectREASON select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nJoin1 derive(STATUS_DATE = coalesce(toString(toDate(STATUS_DATE, 'yyyyMMdd')),STATUS_DATE),\n\t\tClose_Date = coalesce(toString(toDate(Close_Date, 'yyyyMMdd')),Close_Date),\n\t\tRecordTypeId = coalesce(RecordTypeId, lookRecId)) ~> DerivedColumn2\nSelect1 split(isNull(Id),\n\tdisjoint: false) ~> ConditionalSplit2@(insert, upsert)\nConditionalSplit2@insert derive(Language__c = iifNull(Id,\"English\")) ~> DerivedColumn3\nRecordTypeId select(mapColumn(\n\t\tlookRecId = RecordTypeId\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select3\nConditionalSplit1@toSFDC, Select3 join(1 == 1,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> Join1\nConditionalSplit2@upsert sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_oppstatus_Opportunity.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1,\n\tmapColumn(\n\t\tADFId__c,\n\t\tId,\n\t\tStageName,\n\t\tReason_Lost__c,\n\t\tStatus_Date__c,\n\t\tCloseDate,\n\t\tOwnerId,\n\t\tName,\n\t\tRecordTypeId\n\t),\n\tpartitionBy('hash', 1)) ~> upsertOutput\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_oppstatus_source_reject.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> rejectOUTPUT\nDerivedColumn1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_oppstatus_raw.csv')],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nDerivedColumn3 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_oppstatus_Opportunity.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertOutput"
+		}
+	}
+}

@@ -1,0 +1,35 @@
+{
+	"name": "ob_kpma_meeting_venue_audit",
+	"properties": {
+		"folder": {
+			"name": "export"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "export_files",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				}
+			],
+			"script": "source(output(\n\t\tFacility_Id__c as string,\n\t\tName as string,\n\t\tType__c as string,\n\t\tStreet__c as string,\n\t\tStreet2__c as string,\n\t\tCity__c as string,\n\t\tState__c as string,\n\t\tPostal_Code__c as string,\n\t\tCounty__c as string,\n\t\tPhone_Number__c as string,\n\t\tNotes__c as string,\n\t\tSeating_Capacity__c as string,\n\t\tLastModifiedDate as string,\n\t\tVenue_Type_Other__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['salesforce/ob_kpma_meeting_venue_audit*']) ~> source1\nsource1 select(mapColumn(\n\t\tFACILITY_UID = Facility_Id__c,\n\t\t{FACILITY NAME} = Name,\n\t\t{VENUE TYPE} = Type__c,\n\t\tADDRESS1 = Street__c,\n\t\tADDRESS2 = Street2__c,\n\t\tCITY = City__c,\n\t\tSTATE = State__c,\n\t\tZIP = Postal_Code__c,\n\t\t{ZIP+4} = Postal_Code__c,\n\t\tCOUNTY = County__c,\n\t\t{VENUE PHONE} = Phone_Number__c,\n\t\t{VENUE NOTES} = Notes__c,\n\t\t{VENUE CAPACITY} = Seating_Capacity__c,\n\t\tSTATUS = LastModifiedDate,\n\t\t{VENUE TYPE} = Venue_Type_Other__c\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: true) ~> Select1\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('ob_kpma_meeting_venue_audit_', toString(currentUTC(), 'yyyyMMdd_HHmmss'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink1"
+		}
+	}
+}

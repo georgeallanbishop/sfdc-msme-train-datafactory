@@ -1,0 +1,74 @@
+{
+	"name": "MEDICAID_REFERERRAL",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "RecordTypeId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "toInsert"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "toReject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "AddADFID"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "RejectReason"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\t{Lead ID} as string,\n\t\t{Customer ID} as string,\n\t\t{Event ID} as string,\n\t\tTitle as string,\n\t\t{First Name} as string,\n\t\t{Middle Initial} as string,\n\t\t{Last Name} as string,\n\t\tSuffix as string,\n\t\tGender as string,\n\t\tBirthdate as string,\n\t\t{Address 1} as string,\n\t\t{Address 2} as string,\n\t\tCity as string,\n\t\tState as string,\n\t\tZip as string,\n\t\tCounty as string,\n\t\tPhone as string,\n\t\t{Do Not Call} as string,\n\t\t{Email Address} as string,\n\t\t{Email Opt Out} as string,\n\t\t{Toll Free Number Called} as string,\n\t\t{Time of Call} as string,\n\t\t{Date of Call} as string,\n\t\t{Call Disposition} as string,\n\t\t{Plan Effective Date} as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/MEDICAID_REFERRAL*']) ~> source1\nsource(output(\n\t\tRecordTypeId as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/med_referral_record_type_id.csv']) ~> RecordTypeId\nSelect1, RecordTypeId join(1 == 1,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> Join1\nDerivedColumn1 select(mapColumn(\n\t\tADFId__c,\n\t\tLead_ID__c = {Lead ID},\n\t\tCustomer_Agility_Id__c = {Customer ID},\n\t\tPromo_ID__c = {Event ID},\n\t\tSalutation__c = Title,\n\t\tFirst_Name__c = {First Name},\n\t\tMiddle_Name__c = {Middle Initial},\n\t\tLast_Name__c = {Last Name},\n\t\tSuffix__c = Suffix,\n\t\tGender__c,\n\t\tBirthdate__c,\n\t\tOther_Street_1__c = {Address 1},\n\t\tOther_Street_2__c = {Address 2},\n\t\tOther_City__c = City,\n\t\tOther_State__c = State,\n\t\tOther_Postal_Code__c = Zip,\n\t\tCounty__c = County,\n\t\tHome_Phone__c = Phone,\n\t\tDo_Not_Call__c = {Do Not Call},\n\t\tEmail__c = {Email Address},\n\t\tHasOptedOutOfEmail__c,\n\t\tToll_Free_Number_Called__c = {Toll Free Number Called},\n\t\tCall_Time__c = {Time of Call},\n\t\tCall_Date__c = {Date of Call},\n\t\tCall_Disposition__c = {Call Disposition},\n\t\tPlan_Effective_Date__c = {Plan Effective Date}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit1@Insert derive(Birthdate__c = coalesce(toString(toTimestamp(Birthdate, 'yyyyMMdd')), Birthdate),\n\t\tGender__c = iif(Gender==\"M\",\"Male\",iif(Gender==\"F\",\"Female\",toString(null()))),\n\t\tHasOptedOutOfEmail__c = toBoolean(lower({Email Opt Out})),\n\t\t{Do Not Call} = toBoolean(lower({Do Not Call}))) ~> DerivedColumn1\nsource1 derive(ADFId__c = uuid()) ~> AddADFID\nAddADFID split(isNull({Lead ID})||isNull({Event ID})||isNull({First Name})||isNull({Last Name})||isNull(Gender)||isNull(Birthdate)||isNull({Address 1})||isNull(State)||isNull(Zip)||isNull(Phone)||isNull({Email Address}),\n\tdisjoint: false) ~> ConditionalSplit1@(Reject, Insert)\nConditionalSplit1@Reject derive(REJECT_REASON = concat('ADF:Field contain NULL value: ',\r\n iif(isNull({Lead ID}), '{Lead ID} ', ''),\r\n iif(isNull({Event ID}), '{Event ID} ', ''),\r\n   iif(isNull({First Name}), '{First Name} ', ''),\r\n     iif(isNull({Last Name}), '{Last Name} ', ''),\r\n       iif(isNull(Gender), 'Gender ', ''),\r\n         iif(isNull(Birthdate), 'Birthdate ', ''),\r\n           iif(isNull({Address 1}), '{Address 1} ', ''),\r\n             iif(isNull(City), 'City ', ''),\r\n               iif(isNull(State), 'State ', ''),\r\n                 iif(isNull(Zip), 'Zip ', ''),\r\n                   iif(isNull(Phone), 'Phone ', ''),\r\n                     iif(isNull({Email Address}), '{Email Address} ', ''))) ~> RejectReason\nRejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nJoin1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['MEDICAID_REFERRAL_Staging_Inbound_Campaign__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toInsert\nAddADFID sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['MEDICAID_REFERRAL_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedRaw\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['MEDICAID_REFERERRAL_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toReject"
+		}
+	}
+}

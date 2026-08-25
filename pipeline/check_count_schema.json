@@ -1,0 +1,573 @@
+{
+	"name": "check_count_schema",
+	"properties": {
+		"activities": [
+			{
+				"name": "SchemaCheckMetadata",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "schema_check_metadata.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "LookupUploadedFiles",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "sftp_inbound",
+						"type": "DatasetReference",
+						"parameters": {
+							"env": {
+								"value": "@pipeline().parameters.env",
+								"type": "Expression"
+							},
+							"folder": "*"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "SftpReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "AddUploadedFiles",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupUploadedFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('LookupUploadedFiles').output.childItems",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "AddFileName",
+							"description": "Append File Name of Files been uploaded to uploaded_files",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "good_files",
+								"value": {
+									"value": "@item().name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "AppendGoodFilePrefix",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "good_files_prefix",
+								"value": {
+									"value": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(item().name, '.csv', ''), '0', ''), '1', ''), '2', ''),'3',''),'4',''), '5', ''), '6', ''), '7', ''), '8', ''), '9', ''), '_', ''), '.txt', '')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CheckFileExists",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "SchemaCheckMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "AddUploadedFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('SchemaCheckMetadata').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "FileExists",
+							"description": "check if file listed in metadata been uploaded",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@contains(variables('good_files_prefix'), replace(item().FileNamePrefix, '_', ''))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "AppendSchemaMetadata",
+										"description": "Append the schema of files that have been uploaded to schema_metadata",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "schema_metadata",
+											"value": {
+												"value": "@item().Schema",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CheckSchema",
+				"description": "Loop files have valid row count and check if schema is correct",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "CheckFileCount",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('valid_count_files')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "LookupFileHeader",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "SftpReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat(pipeline().parameters.env, '/*/inbound')",
+											"type": "Expression"
+										},
+										"wildcardFileName": {
+											"value": "@item()",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"dataset": {
+									"referenceName": "sftp_inbound_header",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						},
+						{
+							"name": "SchemaMatch",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "LookupFileHeader",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@and(contains(activity('LookupFileHeader').output, 'firstRow'), contains(variables('schema_metadata'), activity('LookupFileHeader').output.firstRow.Prop_0))",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "EmailAlert_SchemaNotMatch",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": "https://prod-126.westus.logic.azure.com:443/workflows/f2a09fd316f4401296799db629e70605/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=wIrVgAP27ukJSLNeqps1E74OJxAj3yZFy-EY8zkmsPQ",
+											"body": {
+												"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', item(), '</b> file does not match with defined schema ','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"siyu.liu@ttec.com,MTSS-KPITSUPPORT@kp.org\",\"Subject\":\"',concat(item(), ' file has wrong schema'),'\"}')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "DeleteInvalidSchemaFile",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "inbound_raw_file",
+												"type": "DatasetReference",
+												"parameters": {
+													"file_name": {
+														"value": "@item()",
+														"type": "Expression"
+													}
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "AddValidSchemaFilePrefix",
+										"description": "Used in reject_pipeline to indicate what files have been processed",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "valid_schema_files_prefix",
+											"value": {
+												"value": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(item(), '.csv', ''), '0', ''), '1', ''), '2', ''),'3',''),'4',''), '5', ''), '6', ''), '7', ''), '8', ''), '9', ''), '_', ''), '.txt', '')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "AddCopiedFiles",
+										"description": "Used in Create Log Content, indicate what files have been copied to blob",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "copied_files",
+											"value": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CheckFileCount",
+				"description": "Check if actual row count match count in file name in uploaded files",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "CheckFileExists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('good_files')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "ValidCount",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "CheckCount",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(int(replace(last(split(item(), '_')), '.csv', '')), activity('CheckCount').output.rowsCopied)",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "EmailAlert_CountNotValid",
+										"type": "WebActivity",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"method": "POST",
+											"url": "https://prod-126.westus.logic.azure.com:443/workflows/f2a09fd316f4401296799db629e70605/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=wIrVgAP27ukJSLNeqps1E74OJxAj3yZFy-EY8zkmsPQ",
+											"body": {
+												"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', item(), '</b> file has invalid row count','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"siyu.liu@ttec.com,MTSS-KPITSUPPORT@kp.org\",\"Subject\":\"',concat(item(), ' file has invalid row count'),'\"}')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "DeleteInvalidCountFile",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "inbound_raw_file",
+												"type": "DatasetReference",
+												"parameters": {
+													"file_name": {
+														"value": "@item()",
+														"type": "Expression"
+													}
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "AddValidCountFile",
+										"description": "Append full file name in valid_count_files",
+										"type": "AppendVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "valid_count_files",
+											"value": {
+												"value": "@item()",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "CheckCount",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "FILE_NAME",
+											"value": "$$FILEPATH"
+										}
+									],
+									"storeSettings": {
+										"type": "SftpReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@concat(pipeline().parameters.env, '/*/inbound')",
+											"type": "Expression"
+										},
+										"wildcardFileName": {
+											"value": "@item()",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".csv"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "sftp_inbound",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().parameters.env",
+											"type": "Expression"
+										},
+										"folder": "*"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "inbound_raw_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": {
+											"value": "@item()",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"env": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"good_files": {
+				"type": "Array"
+			},
+			"good_files_prefix": {
+				"type": "Array"
+			},
+			"schema_metadata": {
+				"type": "Array"
+			},
+			"valid_count_files": {
+				"type": "Array"
+			},
+			"valid_schema_files_prefix": {
+				"type": "Array"
+			},
+			"copied_files": {
+				"type": "Array"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:43Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,38 @@
+{
+	"name": "alms_agent_cert",
+	"properties": {
+		"folder": {
+			"name": "alms"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_comma",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_alms",
+						"type": "DatasetReference"
+					},
+					"name": "InsertAgentCert"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "Select1"
+				}
+			],
+			"script": "source(output(\n\t\t{Agency NPN} as string,\n\t\t{Agency Name} as string,\n\t\t{Agent Status} as string,\n\t\t{Agent NPN} as string,\n\t\t{Agent Last Name} as string,\n\t\t{Agent First Name} as string,\n\t\t{Agent Middle Name} as string,\n\t\t{Carrier Agent ID Number} as string,\n\t\t{NAIC Group Code} as string,\n\t\t{NAIC Group Name} as string,\n\t\t{NAIC Company Code} as string,\n\t\t{NAIC Company Name} as string,\n\t\t{Client Code} as string,\n\t\t{Client Name} as string,\n\t\t{Client Group Number} as string,\n\t\t{Client Group Description} as string,\n\t\t{Cert Entity Code} as string,\n\t\t{Cert Entity Description} as string,\n\t\tCert as string,\n\t\t{Cert Type Code} as string,\n\t\t{Cert Type Description} as string,\n\t\t{Cert Bundle Code} as string,\n\t\t{Cert Bundle Description} as string,\n\t\t{Cert Frequency Code} as string,\n\t\t{Cert Offering Code} as string,\n\t\t{Cert Offering Description} as string,\n\t\t{Cert Data Source} as string,\n\t\t{Cert Data Source FileName} as string,\n\t\t{ALMS Client Cert Code} as string,\n\t\t{Client Cert Product Code} as string,\n\t\t{Certification Year} as string,\n\t\t{ALMS Certification Status} as string,\n\t\t{Carrier Provided Certification Status} as string,\n\t\tState as string,\n\t\t{Cert Enroll Date} as string,\n\t\t{Certification Date} as string,\n\t\t{ReCertification Date} as string,\n\t\t{Certification Term/Expiration Date} as string,\n\t\t{Certification Score} as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: true,\n\twildcardPaths:['ALMS/alms_agent_cert_*']) ~> source1\nsource1 filter((upper({Client Name}) == 'KAISER')) ~> Filter1\nFilter1 select(mapColumn(\n\t\tAgency_NPN__c = {Agency NPN},\n\t\tAgency_Name__c = {Agency Name},\n\t\tAgent_Status__c = {Agent Status},\n\t\tAgent_NPN__c = {Agent NPN},\n\t\tAgent_Last_Name__c = {Agent Last Name},\n\t\tAgent_First_Name__c = {Agent First Name},\n\t\tAgent_Middle_Name__c = {Agent Middle Name},\n\t\tCarrier_Agent_ID_Number__c = {Carrier Agent ID Number},\n\t\tNAIC_Group_Code__c = {NAIC Group Code},\n\t\tNAIC_Group_Name__c = {NAIC Group Name},\n\t\tNAIC_Company_Code__c = {NAIC Company Code},\n\t\tNAIC_Company_Name__c = {NAIC Company Name},\n\t\tClient_Code__c = {Client Code},\n\t\tClient_Name__c = {Client Name},\n\t\tClient_Group_Number__c = {Client Group Number},\n\t\tClient_Group_Description__c = {Client Group Description},\n\t\tCert_Entity_Code__c = {Cert Entity Code},\n\t\tCert_Entity_Description__c = {Cert Entity Description},\n\t\tCert__c = Cert,\n\t\tCert_Type_Code__c = {Cert Type Code},\n\t\tCert_Type_Description__c = {Cert Type Description},\n\t\tCert_Bundle_Code__c = {Cert Bundle Code},\n\t\tCert_Bundle_Description__c = {Cert Bundle Description},\n\t\tCert_Frequency_Code__c = {Cert Frequency Code},\n\t\tCert_Offering_Code__c = {Cert Offering Code},\n\t\tCert_Offering_Description__c = {Cert Offering Description},\n\t\tCert_Data_Source__c = {Cert Data Source},\n\t\tCert_Data_Source_FileName__c = {Cert Data Source FileName},\n\t\tALMS_Client_Cert_Code__c = {ALMS Client Cert Code},\n\t\tClient_Cert_Product_Code__c = {Client Cert Product Code},\n\t\tCertification_Year__c = {Certification Year},\n\t\tALMS_Certification_Status__c = {ALMS Certification Status},\n\t\tCarrier_Provided_Certification_Status__c = {Carrier Provided Certification Status},\n\t\tState__c = State,\n\t\tCert_Enroll_Date__c = {Cert Enroll Date},\n\t\tCertification_Date__c = {Certification Date},\n\t\tReCertification_Date__c = {ReCertification Date},\n\t\tCertification_TermExpiration_Date__c = {Certification Term/Expiration Date},\n\t\tCertification_Score__c = {Certification Score}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('alms_agent_', toString(currentUTC(), 'yyyyMMdd'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> InsertAgentCert"
+		}
+	}
+}

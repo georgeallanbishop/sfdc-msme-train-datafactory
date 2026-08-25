@@ -1,0 +1,94 @@
+{
+	"name": "ib_kpma_seminar_update",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "upsert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "Future"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedInbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "Reject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "AddADFId"
+				},
+				{
+					"name": "ConditionalSplit2"
+				},
+				{
+					"name": "rejectReason"
+				},
+				{
+					"name": "Select3"
+				},
+				{
+					"name": "DerivedColumn3"
+				},
+				{
+					"name": "DerivedColumn4"
+				},
+				{
+					"name": "ConditionalSplit3"
+				},
+				{
+					"name": "DerivedColumn5"
+				},
+				{
+					"name": "Select4"
+				},
+				{
+					"name": "Union1"
+				},
+				{
+					"name": "DerivedColumn6"
+				},
+				{
+					"name": "Union2"
+				}
+			],
+			"script": "source(output(\n\t\t{ACTION CODE} as string,\n\t\t{MEETING ID} as string,\n\t\t{MEETING DATE} as string,\n\t\t{MEETING START TIME} as string,\n\t\t{MEETING END TIME} as string,\n\t\t{PRESENTING AGENT} as string,\n\t\t{ATTENDING AGENT} as string,\n\t\tSTATUS as string,\n\t\t{MEETING EVENT TYPE} as string,\n\t\t{FORMAL/INFORMAL} as string,\n\t\tLANGUAGE as string,\n\t\t{MAX SEATING CAPACITY} as string,\n\t\tFACILITY_UID as string,\n\t\tMEETING_NOTES as string,\n\t\t{MEETING ROOM} as string,\n\t\tOWNER as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_seminar_update_*']) ~> source1\nConditionalSplit2@toSFDC derive(End_Time__c = toTimestamp(concat({MEETING DATE},' ', {MEETING END TIME}), 'MM/dd/yyyy hh:mm aa'),\n\t\tStart_Time__c = toTimestamp(concat({MEETING DATE},' ', {MEETING START TIME}), 'MM/dd/yyyy hh:mm aa'),\n\t\tAttending_Agents = split({ATTENDING AGENT}, ' ')) ~> DerivedColumn1\nConditionalSplit1@pastMeetings select(mapColumn(\n\t\tADFId__c,\n\t\tId = {MEETING ID},\n\t\tPresenting_Agent__c = {PRESENTING AGENT},\n\t\tStatus__c = STATUS,\n\t\tNote__c = MEETING_NOTES,\n\t\teach(match(startsWith(name,'Attending_Agent_')))\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nConditionalSplit3@validAgent split(End_Time__c < currentTimestamp(),\n\tdisjoint: false) ~> ConditionalSplit1@(pastMeetings, futureMeetings)\nDerivedColumn6 select(mapColumn(\n\t\tADFId__c,\n\t\tId = {MEETING ID},\n\t\tMeeting_Date__c = {MEETING DATE},\n\t\tStart_Time__c,\n\t\tEnd_Time__c,\n\t\tPresenting_Agent__c = {PRESENTING AGENT},\n\t\tStatus__c = STATUS,\n\t\tMeeting_Type__c = {MEETING EVENT TYPE},\n\t\tMeeting_FormalInformal__c = {FORMAL/INFORMAL},\n\t\tLanguage__c = LANGUAGE,\n\t\tMaximum_Capacity__c = {MAX SEATING CAPACITY},\n\t\tFacility__c = FACILITY_UID,\n\t\tNote__c = MEETING_NOTES,\n\t\tMeeting_Room__c = {MEETING ROOM},\n\t\tOwnerId = OWNER,\n\t\teach(match(startsWith(name,'Attending_Agent_')))\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nsource1 derive(ADFId__c = uuid()) ~> AddADFId\nAddADFId split(isNull({ACTION CODE})||isNull({MEETING ID})||isNull({PRESENTING AGENT})||(upper({ACTION CODE}) != 'U'),\n\tdisjoint: false) ~> ConditionalSplit2@(toReject, toSFDC)\nConditionalSplit2@toReject derive(REJECT_REASON = concatWS(',', iif(isNull({ACTION CODE})||isNull({MEETING ID})||(isNull({PRESENTING AGENT})), concat('ADF:Required Field Contains NULL Value: ', iif(isNull({ACTION CODE}), 'ACTION CODE ', ''), iif(isNull({MEETING ID}), 'MEETING ID ', ''), iif(isNull({PRESENTING AGENT}), 'PRESENTING AGENT ', '')), ''), iif(upper({ACTION CODE}) != 'U', 'ADF:Required Field Contains INVALID Value: ACTION CODE'))) ~> rejectReason\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select3\nDerivedColumn1 derive(agents_num = size(Attending_Agents)) ~> DerivedColumn3\nDerivedColumn3 derive(Attending_Agent_1__c = iif(agents_num >= 1, Attending_Agents[1], toString(null())),\n\t\tAttending_Agent_2__c = iif(agents_num >= 2, Attending_Agents[2], toString(null())),\n\t\tAttending_Agent_3__c = iif(agents_num >= 3, Attending_Agents[3], toString(null())),\n\t\tAttending_Agent_4__c = iif(agents_num >= 4, Attending_Agents[4], toString(null())),\n\t\tAttending_Agent_5__c = iif(agents_num >= 5, Attending_Agents[5], toString(null())),\n\t\tAttending_Agent_6__c = iif(agents_num >= 6, Attending_Agents[6], toString(null())),\n\t\tAttending_Agent_7__c = iif(agents_num >= 7, Attending_Agents[7], toString(null())),\n\t\tAttending_Agent_8__c = iif(agents_num >= 8, Attending_Agents[8], toString(null())),\n\t\tAttending_Agent_9__c = iif(agents_num >= 9, Attending_Agents[9], toString(null()))) ~> DerivedColumn4\nDerivedColumn4 split((agents_num < 10)&&(isNull(Attending_Agent_1__c)||in([15,18], length(Attending_Agent_1__c)))&&(isNull(Attending_Agent_2__c)||in([15,18], length(Attending_Agent_2__c)))&&(isNull(Attending_Agent_3__c)||in([15,18], length(Attending_Agent_3__c)))&&(isNull(Attending_Agent_4__c)||in([15,18], length(Attending_Agent_4__c)))&&(isNull(Attending_Agent_5__c)||in([15,18], length(Attending_Agent_5__c)))&&(isNull(Attending_Agent_6__c)||in([15,18], length(Attending_Agent_6__c)))&&(isNull(Attending_Agent_7__c)||in([15,18], length(Attending_Agent_7__c)))&&(isNull(Attending_Agent_8__c)||in([15,18], length(Attending_Agent_8__c)))&&(isNull(Attending_Agent_9__c)||in([15,18], length(Attending_Agent_9__c)))&&in([15,18], length({PRESENTING AGENT})),\n\tdisjoint: false) ~> ConditionalSplit3@(validAgent, invalidAgent)\nConditionalSplit3@invalidAgent derive(REJECT_REASON = iif((agents_num >= 10), 'More Than 9 Attending Agents.', concat('Invalid Agent Character Length: ', iif((length(Attending_Agent_1__c) > 0) && not(in([15,18], length(Attending_Agent_1__c))), 'Attending_Agent_1 ', ''), iif((length(Attending_Agent_2__c) > 0) && not(in([15,18], length(Attending_Agent_2__c))), 'Attending_Agent_2 ', ''), iif((length(Attending_Agent_3__c) > 0) && not(in([15,18], length(Attending_Agent_3__c))), 'Attending_Agent_3 ', ''), iif((length(Attending_Agent_4__c) > 0) && not(in([15,18], length(Attending_Agent_4__c))), 'Attending_Agent_4 ', ''), iif((length(Attending_Agent_5__c) > 0) && not(in([15,18], length(Attending_Agent_5__c))), 'Attending_Agent_5 ', ''), iif((length(Attending_Agent_6__c) > 0) && not(in([15,18], length(Attending_Agent_6__c))), 'Attending_Agent_6 ', ''), iif((length(Attending_Agent_7__c) > 0) && not(in([15,18], length(Attending_Agent_7__c))), 'Attending_Agent_7 ', ''), iif((length(Attending_Agent_8__c) > 0) && not(in([15,18], length(Attending_Agent_8__c))), 'Attending_Agent_8 ', ''), iif((length(Attending_Agent_9__c) > 0) && not(in([15,18], length(Attending_Agent_9__c))), 'Attending_Agent_9 ', ''), iif((length({PRESENTING AGENT}) > 0) && not(in([15,18], length({PRESENTING AGENT}))), 'PRESENTING_AGENT ', '')))) ~> DerivedColumn5\nDerivedColumn5 select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select4\nSelect3, Select4 union(byName: true)~> Union1\nConditionalSplit1@futureMeetings derive(Start_Time__c = coalesce(toString(toTimestamp(concat({MEETING DATE},' ', {MEETING START TIME}), 'MM/dd/yyyy hh:mm aa')),{MEETING START TIME}),\n\t\tEnd_Time__c = coalesce(toString(toTimestamp(concat({MEETING DATE},' ', {MEETING END TIME}), 'MM/dd/yyyy hh:mm aa')),{MEETING END TIME})) ~> DerivedColumn6\nSelect2, Select1 union(byName: true)~> Union2\nUnion2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_seminar_update_Meeting__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> Future\nAddADFId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_seminar_update_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedInbound\nUnion1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_seminar_update_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> Reject"
+		}
+	}
+}

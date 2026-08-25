@@ -1,0 +1,54 @@
+{
+	"name": "alms_appointment",
+	"properties": {
+		"folder": {
+			"name": "alms"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_comma",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_alms",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_alms",
+						"type": "DatasetReference"
+					},
+					"name": "KaiserAgent"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Agent"
+				},
+				{
+					"name": "DistinctRows"
+				},
+				{
+					"name": "DerivedColumn1"
+				}
+			],
+			"script": "source(output(\n\t\t{Agency NPN} as string,\n\t\t{Agency Name} as string,\n\t\t{Agent NPN} as string,\n\t\t{Agent Employee Number} as string,\n\t\t{Agent Status} as string,\n\t\tname_last as string,\n\t\tname_first as string,\n\t\tname_middle as string,\n\t\t{State License Abbreviation} as string,\n\t\t{State Name} as string,\n\t\t{NAIC Group Code} as string,\n\t\t{NAIC Group Name} as string,\n\t\t{Company Code} as string,\n\t\t{Company Name} as string,\n\t\t{Company FEIN} as string,\n\t\t{LOA Code} as string,\n\t\t{LOA Description} as string,\n\t\t{LOA Status} as string,\n\t\t{LOA Temination Reason} as string,\n\t\t{LOA Status Reason Date} as string,\n\t\t{LOA Appointment Renewal Date} as string,\n\t\t{LOA County Code} as string,\n\t\t{LOA Agency Name} as string,\n\t\t{LOA Agency FEIN} as string,\n\t\t{Appointment Status} as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: true,\n\twildcardPaths:['ALMS/alms_*_appointment_*']) ~> source1\nsource1 filter(((upper({NAIC Group Name}) == 'KAISER FOUNDATION GRP')&&(upper({LOA Status}) =='APPOINTED'))||{Company Name}== 'TTEC Healthcare Solution, Inc') ~> Filter1\nDerivedColumn1 select(mapColumn(\n\t\tAgency_NPN__c = {Agency NPN},\n\t\tAgency_Name__c = {Agency Name},\n\t\tAgent_NPN__c = {Agent NPN},\n\t\tAgent_Employee_Number__c = {Agent Employee Number},\n\t\tAgent_Status__c = {Agent Status},\n\t\tname_last__c = name_last,\n\t\tname_first__c = name_first,\n\t\tname_middle__c = name_middle,\n\t\tState_License_Abbreviation__c = {State License Abbreviation},\n\t\tState_Name__c = {State Name},\n\t\tNAIC_Group_Code__c = {NAIC Group Code},\n\t\tNAIC_Group_Name__c = {NAIC Group Name},\n\t\tCompany_Code__c = {Company Code},\n\t\tCompany_Name__c = {Company Name},\n\t\tCompany_FEIN__c = {Company FEIN},\n\t\tLOA_Code__c = {LOA Code},\n\t\tLOA_Description__c = {LOA Description},\n\t\tLOA_Status__c = {LOA Status},\n\t\tLOA_Temination_Reason__c = {LOA Temination Reason},\n\t\tLOA_Status_Reason_Date__c = {LOA Status Reason Date},\n\t\tLOA_Appointment_Renewal_Date__c = {LOA Appointment Renewal Date},\n\t\tLOA_County_Code__c = {LOA County Code},\n\t\tLOA_Agency_Name__c = {LOA Agency Name},\n\t\tLOA_Agency_FEIN__c = {LOA Agency FEIN},\n\t\tAppointment_Status__c = {Appointment Status}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nFilter1 select(mapColumn(\n\t\t{Agent NPN}\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Agent\nAgent aggregate(groupBy(mycols = sha2(256,columns())),\n\teach(match(true()), $$ = first($$))) ~> DistinctRows\nFilter1 derive({NAIC Group Name} = iif({Company Name}=='TTEC Healthcare Solution, Inc','KAISER FOUNDATION GRP',{NAIC Group Name})) ~> DerivedColumn1\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('alms_appointment_', toString(currentUTC(), 'yyyyMMdd'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink1\nDistinctRows sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['kaiser_agent.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> KaiserAgent"
+		}
+	}
+}

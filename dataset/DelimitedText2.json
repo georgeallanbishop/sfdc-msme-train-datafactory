@@ -1,0 +1,45 @@
+{
+	"name": "DelimitedText2",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureBlobStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "0e15ec7e-5442-9a4c-8f40-b1dfe0195d89_0.txt",
+				"container": "datafactory"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "Timestamp",
+				"type": "String"
+			},
+			{
+				"name": "Level",
+				"type": "String"
+			},
+			{
+				"name": "OperationName",
+				"type": "String"
+			},
+			{
+				"name": "OperationItem",
+				"type": "String"
+			},
+			{
+				"name": "Message",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

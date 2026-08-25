@@ -1,0 +1,42 @@
+{
+	"name": "customerconnect",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "TaskContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "increamental",
+						"type": "DatasetReference"
+					},
+					"name": "User"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "export_files",
+						"type": "DatasetReference"
+					},
+					"name": "toExport"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Select1"
+				}
+			],
+			"script": "source(output(\n\t\tunique_customer_id as string,\n\t\tTouchpointId as string,\n\t\tTouchpoint_Type as string,\n\t\tAgent_UID as string,\n\t\tCall_Start_Time as string,\n\t\tCall_End_Time as string,\n\t\tCall_Reason as string,\n\t\tAni as string,\n\t\tDNIS as string,\n\t\tclient_assigned_customer_id as string,\n\t\tMedical_Record_Number as string,\n\t\tfirst_name as string,\n\t\tmiddle_initial as string,\n\t\tLast_Name as string,\n\t\tBirthDate as string,\n\t\tAge as string,\n\t\tGender as string,\n\t\tMarried as string,\n\t\tAddress1 as string,\n\t\tAddress2 as string,\n\t\tCity as string,\n\t\tState as string,\n\t\tZip_plus_4 as string,\n\t\tMailing_Address1 as string,\n\t\tMailing_Address2 as string,\n\t\tMailing_City as string,\n\t\tMailing_State as string,\n\t\tMailing_Zip_plus_4 as string,\n\t\tSpouse_First_Name as string,\n\t\tSpouse_Middle_Initial as string,\n\t\tSpouse_Last_Name as string,\n\t\tSpouse_DOB as string,\n\t\tSpouse_Age as string,\n\t\tSpouse_Gender as string,\n\t\tDependent_First_Name as string,\n\t\tDependent_Middle_Initial as string,\n\t\tDependent_Last_Name as string,\n\t\tDependent_DOB as string,\n\t\tDependent_Age as string,\n\t\tDependent_Gender as string,\n\t\tWork_Phone as string,\n\t\tMobile_Phone as string,\n\t\tHome_Phone as string,\n\t\tOther_Phone as string,\n\t\tFax as string,\n\t\tEmail as string,\n\t\tBest_Time as string,\n\t\tBest_Phone as string,\n\t\tHousehold_Size as string,\n\t\tHousehold_Income as string,\n\t\tChildren as string,\n\t\tOccupation as string,\n\t\tInsured as string,\n\t\tHIPPA_Auth as string,\n\t\tReferral_Information__c as string,\n\t\tDo_Not_Call as string,\n\t\tDo_Not_Email as string,\n\t\tSMS_Opt_in as string,\n\t\tDo_Not_Solicit as string,\n\t\tContact_Type as string,\n\t\tPrimary_Contact_UID as string,\n\t\tDo_Not_Mail as string,\n\t\tLanguage_Preference as string,\n\t\tScore_Urgency as string,\n\t\tScore_Medical as string,\n\t\tScore_Lead as string,\n\t\tSmall_Business_Indicator as string,\n\t\tPrimary_Address_Change as string,\n\t\tMailing_Address_Change as string,\n\t\tName_Change as string,\n\t\tDeceased_Flag as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['salesforce/customerconnect*']) ~> TaskContact\nsource(output(\n\t\tId as string,\n\t\tName as string,\n\t\tDivision as string,\n\t\tExtension as string,\n\t\tNUID__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['User/*']) ~> User\nTaskContact, Select1 join(Agent_UID == Id,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join1\nUser select(mapColumn(\n\t\tId,\n\t\tName,\n\t\tDivision,\n\t\tExtension\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nJoin1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('customerconnect_', toString(currentUTC(), 'yyyyMMdd_HHmmss'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> toExport"
+		}
+	}
+}

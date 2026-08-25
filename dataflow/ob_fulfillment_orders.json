@@ -1,0 +1,89 @@
+{
+	"name": "ob_fulfillment_orders",
+	"properties": {
+		"folder": {
+			"name": "export"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "increamental",
+						"type": "DatasetReference"
+					},
+					"name": "LineItems"
+				},
+				{
+					"dataset": {
+						"referenceName": "increamental",
+						"type": "DatasetReference"
+					},
+					"name": "Account"
+				},
+				{
+					"dataset": {
+						"referenceName": "increamental",
+						"type": "DatasetReference"
+					},
+					"name": "User"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "export_files",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Join3"
+				},
+				{
+					"name": "Join4"
+				},
+				{
+					"name": "Aggregate1"
+				},
+				{
+					"name": "Aggregate3"
+				},
+				{
+					"name": "Aggregate4"
+				},
+				{
+					"name": "SelectItems"
+				},
+				{
+					"name": "SelectAccount"
+				},
+				{
+					"name": "SelectUser"
+				},
+				{
+					"name": "Filter1"
+				}
+			],
+			"script": "source(output(\n\t\tId as string,\n\t\t{Contact__r.Customer_Id__c} as string,\n\t\t{Contact__r.Id} as string,\n\t\t{Contact__r.Type__c} as string,\n\t\tPreferred_Spoken_Language__c as string,\n\t\tOTN__c as string,\n\t\t{Contact__r.FirstName} as string,\n\t\t{Contact__r.middle_initial__c} as string,\n\t\t{Contact__r.LastName} as string,\n\t\t{Contact__r.Birthdate} as string,\n\t\t{Contact__r.HomePhone} as string,\n\t\t{Contact__r.OtherStreet} as string,\n\t\t{Contact__r.OtherCity} as string,\n\t\t{Contact__r.OtherState} as string,\n\t\t{Contact__r.OtherPostalCode} as string,\n\t\t{Contact__r.MailingStreet} as string,\n\t\t{Contact__r.MailingCity} as string,\n\t\t{Contact__r.MailingState} as string,\n\t\t{Contact__r.MailingPostalCode} as string,\n\t\tAgent_NPN__c as string,\n\t\tAgent_Lic_State__c as string,\n\t\tAgent_Licensed__c as string,\n\t\t{Owner.Id} as string,\n\t\t{Owner.Name} as string,\n\t\t{Owner.Phone} as string,\n\t\t{Owner.Email} as string,\n\t\tMethod__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['salesforce/ob_fulfillment_orders*']) ~> source1\nsource(output(\n\t\tFulfillment_Order__c as string,\n\t\tOTN__c as string,\n\t\tNum_Apps_Req__c as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['fulfillment_orders_Fulfillment_Orders_Line_Items*']) ~> LineItems\nsource(output(\n\t\tParentId as string,\n\t\tOwnerId as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['fulfillment_orders_Account.csv']) ~> Account\nsource(output(\n\t\tId as string,\n\t\tURL__c as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['fulfillment_orders_User.csv']) ~> User\nsource1, SelectItems join(Id == Fulfillment_Order__c,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join1\nJoin3 derive(extract_dt = toString(currentDate(), 'yyyyMMdd'),\n\t\tzip = split({Contact__r.OtherPostalCode}, '-')[1],\n\t\tzip4 = split({Contact__r.OtherPostalCode}, '-')[2],\n\t\tmailing_to_zip = split({Contact__r.MailingPostalCode}, '-')[1],\n\t\tmailing_to_zip4 = split({Contact__r.MailingPostalCode}, '-')[2],\n\t\tpromo_id = toString(null()),\n\t\tpopulation = toString(null()),\n\t\trate_up_tier = toString(null()),\n\t\t{Contact__r.Birthdate} = replace(left({Contact__r.Birthdate}, 10), '-', ''),\n\t\tapp_otn = toString(null()),\n\t\tagent_rep_ext = toString(null()),\n\t\tcover_letter_version = toString(null()),\n\t\tfulfillment_order_originator = 'CNX') ~> DerivedColumn1\nDerivedColumn1 select(mapColumn(\n\t\textract_dt,\n\t\tprospect_id = {Contact__r.Customer_Id__c},\n\t\tfamily_account_id = ParentId,\n\t\tpromo_id,\n\t\tcnx_contact_id = {Contact__r.Id},\n\t\tcnx_primary_contact_id = {Contact__r.Id},\n\t\trole = {Contact__r.Type__c},\n\t\tpopulation,\n\t\trate_up_tier,\n\t\tlanguage = Preferred_Spoken_Language__c,\n\t\tfulfillment_code = source1@OTN__c,\n\t\tfirst_nm = {Contact__r.FirstName},\n\t\tmiddle_nm = {Contact__r.middle_initial__c},\n\t\tlast_nm = {Contact__r.LastName},\n\t\taddress_1 = {Contact__r.OtherStreet},\n\t\taddress_2 = {Contact__r.OtherStreet},\n\t\tcity = {Contact__r.OtherCity},\n\t\tstate = {Contact__r.OtherStreet},\n\t\tzip,\n\t\tzip4,\n\t\tdob = {Contact__r.Birthdate},\n\t\tphone_number = {Contact__r.HomePhone},\n\t\tmailing_first_nm = {Contact__r.FirstName},\n\t\tmailing_middle_nm = {Contact__r.middle_initial__c},\n\t\tmailing_last_nm = {Contact__r.LastName},\n\t\tmailing_address_1 = {Contact__r.MailingStreet},\n\t\tmailing_address_2 = {Contact__r.MailingStreet},\n\t\tmailing_to_city = {Contact__r.MailingCity},\n\t\tmailing_to_state = {Contact__r.MailingState},\n\t\tmailing_to_zip,\n\t\tmailing_to_zip4,\n\t\tapp_otn,\n\t\tnum_apps_req = Num_Apps_Req__c,\n\t\tagent_rep_id = Agent_NPN__c,\n\t\tagent_rep_lic_state = Agent_Lic_State__c,\n\t\tagent_rep_lic = Agent_Licensed__c,\n\t\tagent_rep_first_and_last_nm = {Owner.Name},\n\t\tagent_rep_phone = {Owner.Phone},\n\t\tagent_rep_ext,\n\t\tagent_email_address = {Owner.Email},\n\t\turl = URL__c,\n\t\tcover_letter_version,\n\t\tfulfillment_order_originator,\n\t\tfulfillment_order_id = source1@Id,\n\t\tshipment_method = Method__c\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: true) ~> Select1\nJoin4, SelectAccount join({Owner.Id} == OwnerId,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join3\nJoin1, SelectUser join({Owner.Id} == SelectUser@Id,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join4\nLineItems aggregate(groupBy(mycols = sha2(256,columns())),\n\teach(match(true()), $$ = first($$))) ~> Aggregate1\nAccount aggregate(groupBy(mycols = sha2(256,columns())),\n\teach(match(true()), $$ = first($$))) ~> Aggregate3\nUser aggregate(groupBy(mycols = sha2(256,columns())),\n\teach(match(true()), $$ = first($$))) ~> Aggregate4\nAggregate1 select(mapColumn(\n\t\tFulfillment_Order__c,\n\t\tOTN__c,\n\t\tNum_Apps_Req__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SelectItems\nAggregate3 select(mapColumn(\n\t\tParentId,\n\t\tOwnerId\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SelectAccount\nAggregate4 select(mapColumn(\n\t\tId,\n\t\tURL__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> SelectUser\nSelect1 filter(!isNull(extract_dt)&&!isNull(fulfillment_code)&&!isNull(first_nm)&&!isNull(last_nm)&&!isNull(address_1)&&!isNull(city)&&!isNull(state)&&!isNull(zip)&&!isNull(mailing_address_1)&&!isNull(mailing_address_2)&&!isNull(mailing_to_city)&&!isNull(mailing_to_state)&&!isNull(mailing_to_zip)&&!isNull(fulfillment_order_id)) ~> Filter1\nFilter1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[(concat('fulfillment_orders_', toString(currentUTC(), 'yyyyMMdd_HHmmss'), '.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink1"
+		}
+	}
+}

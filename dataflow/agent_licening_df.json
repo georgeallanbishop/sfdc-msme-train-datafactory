@@ -1,0 +1,58 @@
+{
+	"name": "agent_licening_df",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_sf_licensing",
+						"type": "DatasetReference"
+					},
+					"name": "licenseRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_sf_licensing",
+						"type": "DatasetReference"
+					},
+					"name": "userRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_sf_licencing_curated",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_sf_licencing_curated",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Join2"
+				},
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "Filter2"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "parameters{\n\trecord_count_l as integer (0),\n\trecord_count_u as integer (0)\n}\nsource(output(\n\t\t{User__r.IsActive} as boolean,\n\t\t{User__r.Id} as string,\n\t\t{User__r.FirstName} as string,\n\t\t{User__r.LastName} as string,\n\t\t{User__r.Email} as string,\n\t\t{User__r.Agent_NPN__c} as string,\n\t\t{User__r.Phone} as string,\n\t\tActive__c as string,\n\t\tState_License_Number__c as string,\n\t\tState__c as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['salesforce_license/licensing_raw*']) ~> licenseRaw\nsource(output(\n\t\tIsActive as string,\n\t\tId as string,\n\t\tFirstName as string,\n\t\tLastName as string,\n\t\tEmail as string,\n\t\tAgent_NPN__c as string,\n\t\tPhone as string,\n\t\tDepartment as string,\n\t\tNUID__c as string,\n\t\tPURL_Account_Type__c as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['salesforce_license/user_raw*']) ~> userRaw\nFilter1 select(mapColumn(\n\t\tISACTIVE = IsActive,\n\t\tID = NUID__c,\n\t\tFIRSTNAME = FirstName,\n\t\tLASTNAME = LastName,\n\t\tEMAIL = Email,\n\t\tPHONE = Phone,\n\t\tAgent_NPN__c,\n\t\tState__c,\n\t\tState_License_Number__c,\n\t\tActive__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nuserRaw, licenseRaw join(Id == {User__r.Id},\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join2\nJoin2 filter(lower(PURL_Account_Type__c) =='kpif' || lower(PURL_Account_Type__c) =='universal tier 2') ~> Filter1\nJoin2 filter(lower(PURL_Account_Type__c) =='medicare' || lower(PURL_Account_Type__c) =='universal tier 2') ~> Filter2\nFilter2 select(mapColumn(\n\t\tISACTIVE = IsActive,\n\t\tID = NUID__c,\n\t\tFIRSTNAME = FirstName,\n\t\tLASTNAME = LastName,\n\t\tEMAIL = Email,\n\t\tPHONE = Phone,\n\t\tAgent_NPN__c,\n\t\tState__c,\n\t\tState_License_Number__c,\n\t\tActive__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\t{Id|Contact__r.Customer_Id__c|Contact__r.Id|Contact__r.Type__c|Preferred_Spoken_Language__c|OTN__c|Contact__r.FirstName|Contact__r.middle_initial__c|Contact__r.LastName|Contact__r.OtherStreet|Contact__r.OtherCity|Contact__r.OtherState|Contact__r.OtherPostalCode|Contact__r.Birthdate|Contact__r.HomePhone|Contact__r.MailingStreet|Contact__r.MailingCity|Contact__r.MailingState|Contact__r.MailingPostalCode|Agent_NPN__c|Agent_Lic_State__c|Agent_Licensed__c|Owner.Id|Owner.Name|Owner.Phone|Owner.Email|Method__c} as string\n\t),\n\tpartitionFileNames:[(concat('ob_almsdata_',toString(currentTimestamp(),'yyyyMMdd_HHmmss_'),toString($record_count_l),'.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tquoteAll: true,\n\tsaveOrder: 1) ~> sink1\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\t{Id|Contact__r.Customer_Id__c|Contact__r.Id|Contact__r.Type__c|Preferred_Spoken_Language__c|OTN__c|Contact__r.FirstName|Contact__r.middle_initial__c|Contact__r.LastName|Contact__r.OtherStreet|Contact__r.OtherCity|Contact__r.OtherState|Contact__r.OtherPostalCode|Contact__r.Birthdate|Contact__r.HomePhone|Contact__r.MailingStreet|Contact__r.MailingCity|Contact__r.MailingState|Contact__r.MailingPostalCode|Agent_NPN__c|Agent_Lic_State__c|Agent_Licensed__c|Owner.Id|Owner.Name|Owner.Phone|Owner.Email|Method__c} as string\n\t),\n\tpartitionFileNames:[(concat('ob_almsdata_medicare_',toString(currentTimestamp(),'yyyyMMdd_HHmmss_'),toString($record_count_l),'.csv'))],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 2) ~> sink2"
+		}
+	}
+}

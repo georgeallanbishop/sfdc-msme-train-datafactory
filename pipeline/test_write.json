@@ -1,0 +1,80 @@
+{
+	"name": "test_write",
+	"properties": {
+		"activities": [
+			{
+				"name": "delta_copy",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceSource",
+						"additionalColumns": [
+							{
+								"name": "kare_mod_date",
+								"value": {
+									"value": "@utcnow()",
+									"type": "Expression"
+								}
+							}
+						],
+						"query": "SELECT Id,AgentType FROM MessagingSession",
+						"readBehavior": "query"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "SFDC_test",
+						"type": "DatasetReference",
+						"parameters": {
+							"api_name": "MessagingSession"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "CIPM_Source",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "Notes__c.snappy.parquet"
+						}
+					}
+				]
+			}
+		],
+		"variables": {
+			"run_date": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

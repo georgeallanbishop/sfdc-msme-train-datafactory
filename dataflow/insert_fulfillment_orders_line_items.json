@@ -1,0 +1,48 @@
+{
+	"name": "insert_fulfillment_orders_line_items",
+	"properties": {
+		"folder": {
+			"name": "post_import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "fulfillmentOrderId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertOrderItems"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Select2"
+				}
+			],
+			"script": "source(output(\n\t\tCONTACT_ID as string,\n\t\tOPPORTUNITY_ID as string,\n\t\tKPIT_REQUEST_DT as string,\n\t\tINVENTORY_ID as string,\n\t\tMAIL_ADDR1 as string,\n\t\tMAIL_ADDR2 as string,\n\t\tMAIL_CITY as string,\n\t\tMAIL_STATE as string,\n\t\tMAIL_ZIP as string,\n\t\tMAIL_ZIP4 as string,\n\t\tFILE_NAME as string,\n\t\tADFId__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['curated/ib_kpma_fulfillment*']) ~> curatedRaw\nsource(output(\n\t\tId as string,\n\t\tADFId__c as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/fulfillment_orders_id.csv']) ~> fulfillmentOrderId\ncuratedRaw select(mapColumn(\n\t\tOTN__c = INVENTORY_ID,\n\t\tADFId__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nfulfillmentOrderId, Select1 join(fulfillmentOrderId@ADFId__c == Select1@ADFId__c,\n\tjoinType:'inner',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join1\nJoin1 select(mapColumn(\n\t\tADFId__c = fulfillmentOrderId@ADFId__c,\n\t\tFulfillment_Order__c = Id,\n\t\tOTN__c\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['insert_Fulfillment_Orders_Line_Items__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> insertOrderItems"
+		}
+	}
+}

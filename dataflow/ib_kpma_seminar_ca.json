@@ -1,0 +1,74 @@
+{
+	"name": "ib_kpma_seminar_ca",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "inbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "RecordTypeId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "curatedInbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "Insert"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "rejectOutput"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "RejectReason"
+				},
+				{
+					"name": "DerivedColumn3"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "DerivedColumn6"
+				},
+				{
+					"name": "Join3"
+				}
+			],
+			"script": "source(output(\n\t\t{Meeting Name} as string,\n\t\t{Start Time} as string,\n\t\t{End Time} as string,\n\t\t{Maximum Attendees} as string,\n\t\t{Address 1} as string,\n\t\t{Address 2} as string,\n\t\tCity as string,\n\t\tState as string,\n\t\t{Postal Code} as string,\n\t\tCoverage as string,\n\t\t{County Name} as string,\n\t\tNotes as string,\n\t\tBrokerID as string,\n\t\t{Meeting Type} as string,\n\t\t{Meal/Snack Served} as string,\n\t\tStatus as string,\n\t\t{Meeting Language} as string,\n\t\tPhoneVenue as string,\n\t\t{Products Categories Presented} as string,\n\t\t{Informal/Formal} as string,\n\t\t{Event Contact} as string,\n\t\t{Contact Phone} as string,\n\t\t{Contract Number} as string,\n\t\t{Meeting Room} as string,\n\t\t{Record Type Name} as string,\n\t\t{Venue Type} as string,\n\t\t{Venue Type Other} as string,\n\t\tOwner as string,\n\t\t{Webinar Template Id} as string,\n\t\t{Webinar Region} as string,\n\t\tAccount_Management_ID as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\tmultiLineRow: true,\n\twildcardPaths:['raw/ib_kpma_seminar_ca_*']) ~> inbound\nsource(output(\n\t\tRecordTypeId as string,\n\t\t{Record Type Name} as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/meeting_record_type_id.csv']) ~> RecordTypeId\nDerivedColumn3 split(isNull({Meeting Name})||isNull({Start Time})||isNull({Maximum Attendees})||isNull(BrokerID)||isNull({Meeting Type})||isNull(Status)||isNull({Meeting Language})||isNull({Record Type Name})||isNull(Owner)||(({Record Type Name} == 'KPMA Seminars')&&(isNull({Address 1})||isNull(City)||isNull(State)||isNull({Postal Code})))||(({Record Type Name} == 'KPMA Webinars')&&(isNull({Webinar Template Id})||isNull({Postal Code})||isNull(State)||isNull({County Name}))),\n\tdisjoint: false) ~> ConditionalSplit1@(rejectNull, data)\nConditionalSplit1@rejectNull derive(REJECT_REASON = concat(iif(isNull({Meeting Name})||isNull({Start Time})||isNull({Maximum Attendees})||isNull(BrokerID)||isNull({Meeting Type})||isNull(Status)||isNull({Meeting Language})||isNull({Record Type Name})||isNull(Owner), concat('ADF:Field contain NULL value: ', iif(isNull({Meeting Name}), 'Meeting Name, ', ''), iif(isNull({Start Time}), 'Start Time, ', ''), iif(isNull({Maximum Attendees}), 'Maximum Attendees, ', ''), iif(isNull(BrokerID), 'BrokerID, ', ''), iif(isNull({Meeting Type}), 'Meeting Type, ', ''),iif(isNull(Status), 'Status, ', ''), iif(isNull({Meeting Language}), 'Meeting_Language, ', ''), iif(isNull({Record Type Name}), 'Record Type Name, ',''),iif(isNull(Owner), 'Owner ',''), '.'), ''), iif(({Record Type Name} == 'KPMA Seminars')&&(isNull({Address 1})||isNull(City)||isNull(State)||isNull({Postal Code})), concat('ADF:Required Field Missing for KPMA Seminars: ', iif(isNull({Address 1}), 'Address 1, ', ''), iif(isNull(City), 'City, ', ''), iif(isNull(State), 'State, ', ''), iif(isNull({Postal Code}), 'Postal Code, ', '')), ''), iif(({Record Type Name} == 'KPMA Webinars')&&(isNull(Owner)||isNull({Webinar Template Id})||isNull({Postal Code})||isNull(State)||isNull({County Name})), concat('ADF:Required Field Missing for KPMA Webinars: ', iif(isNull(Owner), 'Owner, ', ''), iif(isNull({Webinar Template Id}), 'Webinar Template ID, ', 'Missing State || Postal Code || County Name')), ''))) ~> RejectReason\ninbound derive(ADFId__c = uuid()) ~> DerivedColumn3\nJoin3 select(mapColumn(\n\t\tADFId__c,\n\t\tName = {Meeting Name},\n\t\tStart_Time__c = {Start Time},\n\t\tEnd_Time__c = {End Time},\n\t\tMaximum_Capacity__c = {Maximum Attendees},\n\t\tAddress_1__c = {Address 1},\n\t\tAddress_2__c = {Address 2},\n\t\tCity__c = City,\n\t\tState__c = State,\n\t\tZip__c = {Postal Code},\n\t\tCoverage__c = Coverage,\n\t\tCounty__c = {County Name},\n\t\tNote__c = Notes,\n\t\tMeeting_Type__c = {Meeting Type},\n\t\tMeal_Served__c,\n\t\tStatus__c = Status,\n\t\tLanguage__c = {Meeting Language},\n\t\tPhone_Venue__c = PhoneVenue,\n\t\tProducts_Category_Presented__c = {Products Categories Presented},\n\t\tFormal_Informal__c = {Informal/Formal},\n\t\tMeeting_Event_Contact__c = {Event Contact},\n\t\tContact_Phone__c = {Contact Phone},\n\t\tMeeting_Contract_Number__c = {Contract Number},\n\t\tPresenting_Agent__c = BrokerID,\n\t\tMeeting_Room__c = {Meeting Room},\n\t\tVenue_Type__c = {Venue Type},\n\t\tVenue_Type_Other__c = {Venue Type Other},\n\t\tOwnerId = Owner,\n\t\tOn24_Webinar_Template_Id__c = {Webinar Template Id},\n\t\tWebinar_Region__c = {Webinar Region},\n\t\tRecordTypeId,\n\t\tTitle__c = {Meeting Name},\n\t\tAccount__c = Account_Management_ID\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select1\nRejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nConditionalSplit1@data derive(Meal_Served__c = case(isNull({Meal/Snack Served}),'false',coalesce(toString(toBoolean({Meal/Snack Served})),{Meal/Snack Served}))) ~> DerivedColumn6\nDerivedColumn6, RecordTypeId join(ConditionalSplit1@data@{Record Type Name} == RecordTypeId@{Record Type Name},\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'auto')~> Join3\nDerivedColumn3 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_seminar_ca_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> curatedInbound\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_seminar_ca_Meeting__c.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> Insert\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_seminar_ca_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> rejectOutput"
+		}
+	}
+}

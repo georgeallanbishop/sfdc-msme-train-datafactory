@@ -1,0 +1,32 @@
+{
+	"name": "NEDI_outbound_no_delim",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFTP_NEDI",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"filename": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"fileName": {
+					"value": "@dataset().filename",
+					"type": "Expression"
+				},
+				"folderPath": "/sftphome/EDIgQKS8"
+			},
+			"columnDelimiter": "\u0001",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": ""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

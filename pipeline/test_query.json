@@ -1,0 +1,77 @@
+{
+	"name": "test_query",
+	"properties": {
+		"activities": [
+			{
+				"name": "FromSalesforce",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SalesforceSource",
+						"query": " SELECT LastModifiedDate,Id,Contact__r.Customer_Id__c, Contact__r.Id, Contact__r.Type__c, Preferred_Spoken_Language__c, OTN__c, Contact__r.FirstName, Contact__r.Middle_Initial__c, Contact__r.LastName, Contact__r.BirthDate, Contact__r.HomePhone, Contact__r.OtherStreet, Contact__r.OtherCity, Contact__r.OtherState, Contact__r.OtherPostalCode, Contact__r.MailingStreet, Contact__r.MailingCity, Contact__r.MailingState, Contact__r.MailingPostalCode, Agent_NPN__c, Agent_Lic_State__c, Agent_Licensed__c, Owner.Id,Owner.Name, Owner.Phone,Owner.Email, Method__c FROM Fulfillment_Orders__c WHERE RecordType.Name = 'KPIF' AND Contact__r.AccountId != null",
+						"readBehavior": "query"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobStorageWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "SF_UAT",
+						"type": "DatasetReference",
+						"parameters": {
+							"object": "MessagingSession"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "inbound_salesforce_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": "T"
+						}
+					}
+				]
+			}
+		],
+		"variables": {
+			"schemas": {
+				"type": "Array"
+			},
+			"good_schema_files": {
+				"type": "Array"
+			},
+			"bad_name_files": {
+				"type": "Array"
+			},
+			"bad_schema_files": {
+				"type": "Array"
+			},
+			"test": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:44Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

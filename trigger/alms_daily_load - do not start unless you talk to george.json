@@ -1,0 +1,25 @@
+{
+	"name": "alms_daily_load - do not start unless you talk to george",
+	"properties": {
+		"description": "Loads alms data from sftp site to salesforce staging and blob storage",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "alms_import",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-06-18T03:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

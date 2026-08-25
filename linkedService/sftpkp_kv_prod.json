@@ -1,0 +1,11 @@
+{
+	"name": "sftpkp_kv_prod",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://sf-msme-prod-kv.vault.azure.net/"
+		}
+	}
+}

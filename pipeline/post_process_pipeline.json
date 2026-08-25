@@ -1,0 +1,139 @@
+{
+	"name": "post_process_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "If PostNewContact",
+				"description": "If new_contact processed today, add notes to Notes__c",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@contains(pipeline().parameters.processed_files_prefix, 'ibkpmanewcontact')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "PostNewContact",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "post_new_contact",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"uploaded_files": {
+										"value": "@pipeline().parameters.processed_files",
+										"type": "Expression"
+									},
+									"last_modified_time": {
+										"value": "@pipeline().parameters.pipeline_start_time",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If PostFulfillment",
+				"description": "If fulfillment_order processed today, add fulfillment_orders_line_items",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@contains(pipeline().parameters.processed_files_prefix, 'ibkpmafulfillment')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "PostFulfillment",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "post_fufillment_order",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pipeline_start_time": {
+										"value": "@pipeline().parameters.pipeline_start_time",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If PostContactUpdate",
+				"description": "If contact_update processed today, add notes to Notes__c",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@contains(pipeline().parameters.processed_files_prefix, 'ibkpmacontactupdate')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "PostContactUpdate",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "post_contact_update",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"last_modified_time": {
+										"value": "@pipeline().parameters.pipeline_start_time",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"processed_files_prefix": {
+				"type": "array"
+			},
+			"pipeline_start_time": {
+				"type": "string"
+			},
+			"processed_files": {
+				"type": "array"
+			}
+		},
+		"folder": {
+			"name": "import"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:46Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

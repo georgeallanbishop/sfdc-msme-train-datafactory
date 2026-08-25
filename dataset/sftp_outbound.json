@@ -1,0 +1,44 @@
+{
+	"name": "sftp_outbound",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "SFTP",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"env": {
+				"type": "string",
+				"defaultValue": "test"
+			},
+			"folder": {
+				"type": "string",
+				"defaultValue": "uat"
+			},
+			"filename": {
+				"type": "string",
+				"defaultValue": "uat"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"fileName": {
+					"value": "@dataset().filename",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat(dataset().env, '/', dataset().folder)",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

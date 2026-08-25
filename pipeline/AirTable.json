@@ -1,0 +1,34 @@
+{
+	"name": "AirTable",
+	"properties": {
+		"activities": [
+			{
+				"name": "Web1",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"headers": {
+						"Authorization": "Bearer keyOPLnKPI9WSdz9B"
+					},
+					"url": "https://api.airtable.com/v0/app0RNb66e6W6lUXa/tbltlIktaSuKlrum5",
+					"connectVia": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:37Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

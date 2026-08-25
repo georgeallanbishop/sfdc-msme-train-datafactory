@@ -1,0 +1,1094 @@
+{
+	"name": "export_from_salesforce",
+	"properties": {
+		"activities": [
+			{
+				"name": "ExportMetadata",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "SetRunDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SetRunDateSuffix",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "SetSTDRunDate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"wildcardFileName": "export_metadata.csv",
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "metadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ExtractSalesforce",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "ExportMetadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('ExportMetadata').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "FromSalesforce",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SalesforceV2Source",
+									"SOQLQuery": {
+										"value": "@replace(replace(replace(replace(item().Query,'STD_ADFLastUpdateTime', concat(replace(item().LastUpdateTime, ' ','T'), 'Z')), 'STD_ADFEndTime', variables('std_run_date')),'ADFLastUpdateTime', item().LastUpdateTime), 'ADFEndTime', variables('run_date'))",
+										"type": "Expression"
+									},
+									"includeDeletedObjects": false
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ".txt"
+									}
+								},
+								"enableStaging": false,
+								"dataIntegrationUnits": 4,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "salesforce_object",
+									"type": "DatasetReference",
+									"parameters": {
+										"object": "test"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "inbound_salesforce_file",
+									"type": "DatasetReference",
+									"parameters": {
+										"file_name": "@concat(item().FileName, '_', variables('run_date_suffix'), '.csv')"
+									}
+								}
+							]
+						},
+						{
+							"name": "AddSuccessLog",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "FromSalesforce",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "log_content",
+								"value": {
+									"value": "@concat('export_pipeline', '|', pipeline().TriggerTime, '|', utcnow(), '|', item().SalesforceObject, '|', 'SFTP', '|', concat(item().FileName, '_', variables('run_date_suffix'), '.csv'), '|', 'Export', '|', 'Success', '|', activity('FromSalesforce').output.rowsCopied)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "AddMetadata",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "FromSalesforce",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "processed_metadata",
+								"value": {
+									"value": "@item()",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "AddFailLog",
+							"description": "",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "FromSalesforce",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "log_content",
+								"value": {
+									"value": "@concat('export_pipeline', '|', pipeline().TriggerTime, '|', utcnow(), '|', item().SalesforceObject, '|', 'SFTP', '|', concat(item().FileName, '_', variables('run_date_suffix'), '.csv'), '|', 'Export', '|', 'Fail', '|', '0')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "AddRowCount",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "FromSalesforce",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "file_row_count",
+								"value": {
+									"value": "@concat(item().FileName, '|', activity('FromSalesforce').output.rowsCopied)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SetRunDate",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_date",
+					"value": {
+						"value": "@replace(replace(replace(startOfDay(pipeline().TriggerTime), 'T', ' '), 'Z', ''), '.0000000', '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ExportTransformation",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "ExtractSalesforce",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('processed_metadata')",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"activities": [
+						{
+							"name": "AppendFileName",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Upload2SFTP_Normal",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "success_files",
+								"value": {
+									"value": "@item().FileName",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "If Transformation",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(item().Transformation, 'true')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "ToOutbound",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": "salesforce",
+													"wildcardFileName": {
+														"value": "@concat(item().FileName, '*')",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "AzureBlobStorageWriteSettings"
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".csv"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "inbound_salesforce_file",
+												"type": "DatasetReference",
+												"parameters": {
+													"file_name": "test"
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "export_files",
+												"type": "DatasetReference"
+											}
+										]
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Transformation",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "export_transformation",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"file_name": {
+													"value": "@item().FileName",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "AddTimeLog",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Upload2SFTP_Normal",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "time_log_content",
+								"value": {
+									"value": "@concat(concat(item().FileName, '_', variables('run_date_suffix'), '.csv'), '|', utcnow())",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "AddHeaderTailer",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "If Transformation",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Dev/SFDC/Export/Add Header Footer",
+								"baseParameters": {
+									"cnt_log": {
+										"value": "@string(variables('file_row_count'))",
+										"type": "Expression"
+									},
+									"process_name": {
+										"value": "@item().FileName",
+										"type": "Expression"
+									},
+									"env": {
+										"value": "@pipeline().globalParameters.env",
+										"type": "Expression"
+									},
+									"add_header": {
+										"value": "@item().Header",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "SFDC_Databricks",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "EmailAlert_ExportFileCreated",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Upload2SFTP_Normal",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "POST",
+								"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+								"connectVia": {
+									"referenceName": "SFDCTest",
+									"type": "IntegrationRuntimeReference"
+								},
+								"body": {
+									"value": "@concat('{\"Body\":\"',concat('<body><p style=\\\"color:#000000\\\";>Hi Team,<br /><br /> The <b>', activity('AddHeaderTailer').output.runOutput, '</b> export file has been created and uploaded to SFTP','.<br /><br />Thanks<br />Siyu</p></body>'),'\",\"EmailTo\":\"',pipeline().parameters.emails,'\",\"Subject\":\"',concat(activity('AddHeaderTailer').output.runOutput, ' export file has been created'),'\"}')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Upload2SFTP_Normal",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "If Welltok",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": "export_files",
+										"wildcardFileName": {
+											"value": "@activity('AddHeaderTailer').output.runOutput",
+											"type": "Expression"
+										},
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "DelimitedTextSink",
+									"storeSettings": {
+										"type": "SftpWriteSettings",
+										"operationTimeout": "01:00:00",
+										"useTempFileRename": true
+									},
+									"formatSettings": {
+										"type": "DelimitedTextWriteSettings",
+										"quoteAllText": true,
+										"fileExtension": ""
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "export_files",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "sftp_outbound",
+									"type": "DatasetReference",
+									"parameters": {
+										"env": {
+											"value": "@pipeline().globalParameters.env",
+											"type": "Expression"
+										},
+										"folder": {
+											"value": "@item().Folder",
+											"type": "Expression"
+										},
+										"filename": {
+											"value": "@activity('AddHeaderTailer').output.runOutput",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "If Veritas",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "AddHeaderTailer",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@startswith(item().FileName, 'fulfillment_orders')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Copy Veritas",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": "export_files",
+													"wildcardFileName": {
+														"value": "@activity('AddHeaderTailer').output.runOutput",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "SftpWriteSettings",
+													"operationTimeout": "01:00:00",
+													"useTempFileRename": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ""
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "export_files",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "veritas_sftp",
+												"type": "DatasetReference"
+											}
+										]
+									},
+									{
+										"name": "sftp Veritas to adf",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "Copy Veritas",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": "export_files",
+													"wildcardFileName": {
+														"value": "@activity('AddHeaderTailer').output.runOutput",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "SftpWriteSettings",
+													"operationTimeout": "01:00:00",
+													"useTempFileRename": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".csv"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "export_files",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "sftp_outbound",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": "test",
+													"folder": "uat",
+													"filename": "uat"
+												}
+											}
+										]
+									}
+								]
+							}
+						},
+						{
+							"name": "If Welltok",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "If Veritas",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@startswith(item().FileName, 'ob_welltok')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "sftp Welltok",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": "export_files",
+													"wildcardFileName": {
+														"value": "@activity('AddHeaderTailer').output.runOutput",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "SftpWriteSettings",
+													"operationTimeout": "01:00:00",
+													"useTempFileRename": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".csv"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "export_files",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "Welltok_sftp",
+												"type": "DatasetReference"
+											}
+										]
+									},
+									{
+										"name": "sftp Welltok to adf",
+										"type": "Copy",
+										"dependsOn": [
+											{
+												"activity": "sftp Welltok",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobStorageReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": "export_files",
+													"wildcardFileName": {
+														"value": "@activity('AddHeaderTailer').output.runOutput",
+														"type": "Expression"
+													},
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "DelimitedTextSink",
+												"storeSettings": {
+													"type": "SftpWriteSettings",
+													"operationTimeout": "01:00:00",
+													"useTempFileRename": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextWriteSettings",
+													"quoteAllText": true,
+													"fileExtension": ".csv"
+												}
+											},
+											"enableStaging": false,
+											"translator": {
+												"type": "TabularTranslator",
+												"typeConversion": true,
+												"typeConversionSettings": {
+													"allowDataTruncation": true,
+													"treatBooleanAsNumber": false
+												}
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "export_files",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "sftp_outbound",
+												"type": "DatasetReference",
+												"parameters": {
+													"env": "test",
+													"folder": "uat",
+													"filename": "uat"
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "UpdateExportMetadata",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "ExportTransformation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "update_export_metadata",
+						"type": "DataFlowReference",
+						"parameters": {
+							"succuss_files": {
+								"value": "@variables('success_files')",
+								"type": "Expression"
+							},
+							"last_update_time": {
+								"value": "'@{variables('run_date')}'",
+								"type": "Expression"
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "SetRunDateSuffix",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_date_suffix",
+					"value": {
+						"value": "@formatDateTime(pipeline().TriggerTime, 'yyyyMMdd_HHmmss')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "createExportLog",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "ExportTransformation",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Dev/SFDC/createExportLog",
+					"baseParameters": {
+						"log_content": {
+							"value": "@string(variables('log_content'))",
+							"type": "Expression"
+						},
+						"time_log_content": {
+							"value": "@string(variables('time_log_content'))",
+							"type": "Expression"
+						},
+						"pipeline_end_time": {
+							"value": "@utcnow()",
+							"type": "Expression"
+						},
+						"env": {
+							"value": "@pipeline().parameters.env",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "SFDC_Databricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SetSTDRunDate",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "std_run_date",
+					"value": {
+						"value": "@replace(startOfDay(pipeline().TriggerTime), '.0000000', '')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "fail_email_alert",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "ExportTransformation",
+						"dependencyConditions": [
+							"Skipped",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-121.westus.logic.azure.com:443/workflows/717d4424fc544d6e92cba18b472d7938/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Ym6DFclJvCTSrrzVMuyX2aekILfT-jzz4abLobGc9Hc",
+					"connectVia": {
+						"referenceName": "SFDCTest",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "@concat('{\n    \"Body\":\"<body><p style=\\\"color:#000000\\\";>Please find below the details for the export from salesforce pipeline failure.<br /><br />Pipeline Name: ', pipeline().Pipeline, '<br />Pipeline Run ID: ', pipeline().RunId, '<br />Process Date: ', convertFromUtc(utcnow(), 'Eastern Standard Time'), ' EST<br /><br /><br /><h5 />[THIS IS AN AUTOMATED MESSAGE - PLEASE DO NOT REPLY DIRECTLY TO THIS EMAIL]</body>\", \n    \"EmailTo\":\"', variables('fail_email'), '\", \n    \"Subject\":\"Export from salesforce pipeline failed\"\n}')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"env": {
+				"type": "string",
+				"defaultValue": "test"
+			},
+			"emails": {
+				"type": "string",
+				"defaultValue": "siyu.liu@ttec.com,mtss-kpitsupport@kp.org,george.bishop@ttec.com"
+			}
+		},
+		"variables": {
+			"run_date": {
+				"type": "String"
+			},
+			"success_files": {
+				"type": "Array"
+			},
+			"processed_metadata": {
+				"type": "Array"
+			},
+			"run_date_suffix": {
+				"type": "String"
+			},
+			"log_content": {
+				"type": "Array"
+			},
+			"time_log_content": {
+				"type": "Array"
+			},
+			"std_run_date": {
+				"type": "String"
+			},
+			"file_row_count": {
+				"type": "Array"
+			},
+			"fail_email": {
+				"type": "String",
+				"defaultValue": "george.bishop@ttecdigital.com,vivek.natan@ttecdigital.com,smit.patil@ttecdigital.com,praveen.kavali@ttecdigital.com,durga.jakka@ttecdigital.com,astha.saluja@ttecdigital.com,pawan.dixit@ttecdigital.com,priyank.dsilva@ttecdigital.com,purvesh.jain@ttecdigital.com,siva.kv@ttecdigital.com"
+			}
+		},
+		"folder": {
+			"name": "export"
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-07T20:42:46Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,43 @@
+{
+	"name": "OEC hourly export",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "master_pipeline_export_hourly",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-06-30T20:15:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"hours": [
+						9,
+						15,
+						12,
+						17,
+						3,
+						0
+					],
+					"weekDays": [
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Friday",
+						"Thursday",
+						"Sunday",
+						"Saturday"
+					]
+				}
+			}
+		}
+	}
+}

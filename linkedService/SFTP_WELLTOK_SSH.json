@@ -1,0 +1,32 @@
+{
+	"name": "SFTP_WELLTOK_SSH",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"description": "Connection to Welltok SFTP using SSH Key",
+		"annotations": [],
+		"type": "Sftp",
+		"typeProperties": {
+			"host": "sftpweb01.silverlink.com",
+			"port": 22,
+			"skipHostKeyValidation": true,
+			"authenticationType": "SshPublicKey",
+			"userName": "5122kpifnational8kp",
+			"privateKeyContent": {
+				"type": "SecureString",
+				"value": "**********"
+			},
+			"passPhrase": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "sftpkp_kv",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "ncs-welltok-sftp-pass-phrase"
+			}
+		},
+		"connectVia": {
+			"referenceName": "SFDCTest",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

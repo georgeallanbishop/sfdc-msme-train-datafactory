@@ -1,0 +1,41 @@
+{
+	"name": "daily export trigger 24 hours",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "master_pipeline_export",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Week",
+				"interval": 1,
+				"startTime": "2021-07-10T03:00:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						45
+					],
+					"hours": [
+						3
+					],
+					"weekDays": [
+						"Sunday",
+						"Monday",
+						"Tuesday",
+						"Wednesday",
+						"Thursday",
+						"Friday",
+						"Saturday"
+					]
+				}
+			}
+		}
+	}
+}

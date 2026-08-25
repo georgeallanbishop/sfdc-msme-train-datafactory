@@ -1,0 +1,113 @@
+{
+	"name": "ib_kpma_new_contact",
+	"properties": {
+		"folder": {
+			"name": "import"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "inbound_raw",
+						"type": "DatasetReference"
+					},
+					"name": "inbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "RecordTypeId"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertLead"
+				},
+				{
+					"dataset": {
+						"referenceName": "insert_to_sfdc",
+						"type": "DatasetReference"
+					},
+					"name": "insertContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesLead"
+				},
+				{
+					"dataset": {
+						"referenceName": "Intermediate_raw",
+						"type": "DatasetReference"
+					},
+					"name": "notesContact"
+				},
+				{
+					"dataset": {
+						"referenceName": "inbound_curated",
+						"type": "DatasetReference"
+					},
+					"name": "CuratedInbound"
+				},
+				{
+					"dataset": {
+						"referenceName": "intermediate_reject",
+						"type": "DatasetReference"
+					},
+					"name": "Reject"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "DerivedColumn"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Select3"
+				},
+				{
+					"name": "Select4"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "AddRecordTypeId"
+				},
+				{
+					"name": "DerivedColumn3"
+				},
+				{
+					"name": "ConditionalSplit2"
+				},
+				{
+					"name": "rejectReason"
+				},
+				{
+					"name": "Select5"
+				}
+			],
+			"script": "source(output(\n\t\tCUSTOMER_ID as string,\n\t\tFIRST_NAME as string,\n\t\tMIDDLE_NAME as string,\n\t\tLAST_NAME as string,\n\t\tMDCR_FIRST_NAME as string,\n\t\tMDCR_MIDDLE_NAME as string,\n\t\tMDCR_LAST_NAME as string,\n\t\tBIRTH_DT as string,\n\t\tGENDER as string,\n\t\tPREF_LANG as string,\n\t\tHOME_ADDR1 as string,\n\t\tHOME_ADDR2 as string,\n\t\tHOME_CITY as string,\n\t\tHOME_STATE as string,\n\t\tHOME_ZIP as string,\n\t\tHOME_ZIP4 as string,\n\t\tMAIL_ADDR1 as string,\n\t\tMAIL_ADDR2 as string,\n\t\tMAIL_CITY as string,\n\t\tMAIL_STATE as string,\n\t\tMAIL_ZIP as string,\n\t\tMAIL_ZIP4 as string,\n\t\tEMAIL_ID as string,\n\t\tHOME_PHONE as string,\n\t\tOTHER_PHONE as string,\n\t\tWORK_PHONE as string,\n\t\tCELL_PHONE as string,\n\t\tHICN as string,\n\t\tPART_A as string,\n\t\tPART_B as string,\n\t\tKP_MBR as string,\n\t\tGROUP_NO as string,\n\t\tSUBGROUP_NO as string,\n\t\tGROUP_TYPE as string,\n\t\tCONVERSION_TYPE as string,\n\t\tMRN as string,\n\t\tMEMBER_ROLE as string,\n\t\tCONTACT_OWNER as string,\n\t\tPROSPECT_TYPE as string,\n\t\tPROMO_ID as string,\n\t\tOK_TO_MAIL as string,\n\t\tPART_A_EFF_DT as string,\n\t\tPART_B_EFF_DT as string,\n\t\tOPPORTUNITY_CREATE as string,\n\t\tADDRESS_VALIDATION_FLAG as string,\n\t\tPTC as string,\n\t\tPTC_SCOPE as string,\n\t\tPTC_SOURCE as string,\n\t\tPTC_DATE as string,\n\t\tPTC_EXPIRY_DT as string,\n\t\tPTE as string,\n\t\tPTE_SCOPE as string,\n\t\tPTE_SOURCE as string,\n\t\tPTE_DATE as string,\n\t\tPTE_EXPIRY_DT as string,\n\t\tGROUP_NAME as string,\n\t\tSUBGROUP_NAME as string,\n\t\tGROUP_MEDICARE_PLAN as string,\n\t\tDO_NOT_SOLICIT as string,\n\t\tOK_TO_IVR as string,\n\t\tSUBSCRIBER_MRN as string,\n\t\tSUBSCRIBER_CONTACT_ID as string,\n\t\tCALL_REASON as string,\n\t\tNOTES as string,\n\t\tROLE as string,\n\t\tBADEMAIL as string,\n\t\tBESTTIME as string,\n\t\tCMS_ENROLL_SUBMIT_DATE as string,\n\t\tCMS_FILE_DATE as string,\n\t\tEMPLOYER_GROUP_NUM as string,\n\t\tEMPLOYER_GROUP_TYPE as string,\n\t\tMEDNET_APP_ID as string,\n\t\tMEDNET_APP_SUBMIT_DATE as string,\n\t\tDEPENDENT_CONTACT_ID as string,\n\t\tDEPENDENT_MRN as string,\n\t\tDEPENDENT_SPOUSE as string,\n\t\tDEPS_HAS_DUAL_COVERAGE as string,\n\t\tDEPS_IS_MEMBER as string,\n\t\tDEPS_OTHER_COVERAGE as string,\n\t\tHAS_DUAL_COVERAGE as string,\n\t\tKPRE_ID as string,\n\t\tMAILING_ADDRESS_CHANGE as string,\n\t\tMEDICALSERVICEAREA as string,\n\t\tMEDNAMESAME as string,\n\t\tMEMBER as string,\n\t\tNAME_CHANGE as string,\n\t\tNOTINTERESTED as string,\n\t\tOK_TO_CALL_LIS as string,\n\t\tOK_TO_EMAIL_FOR_SEMINARS as string,\n\t\tPBP as string,\n\t\tPLAN_ID as string,\n\t\tPLAN_NAME as string,\n\t\tPRIMARY_ADDRESS_CHANGE as string,\n\t\tPRIMARY_PRODUCT_OF_INTEREST as string,\n\t\tSAME as string,\n\t\tTEFRA as string,\n\t\tBC2_CONTACT_ID as string,\n\t\tEMPLOYER_GROUP as string,\n\t\tMEDICAID_NUMBER as string,\n\t\tISMEDICARE as string,\n\t\tHOME_COUNTY as string,\n\t\tMAILING_COUNTY as string,\n\t\tPTT as string,\n\t\tPTT_SCOPE as string,\n\t\tPTT_SOURCE as string,\n\t\tPTT_DATE as string,\n\t\tDIGITAL_ID as string,\n\t\tSPECIAL_COHORT as string,\n\t\tMRN_PREFIX as string,\n\t\tFILE_NAME as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/ib_kpma_new_contact*']) ~> inbound\nsource(output(\n\t\tRecordTypeId as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: true,\n\tignoreNoFilesFound: false,\n\twildcardPaths:['raw/lead_record_type_id.csv']) ~> RecordTypeId\nDerivedColumn1 select(mapColumn(\n\t\tADFId__c,\n\t\tCustomer_Id__c = CUSTOMER_ID,\n\t\tFirstName = FIRST_NAME,\n\t\tMiddleName = MIDDLE_NAME,\n\t\tLastName = LAST_NAME,\n\t\tMedicare_First_Name__c = MDCR_FIRST_NAME,\n\t\tMEDICARE_MIDDLE_NAME__c = MDCR_MIDDLE_NAME,\n\t\tMedicare_Last_Name__c = MDCR_LAST_NAME,\n\t\tBirthdate__c = BIRTH_DT,\n\t\tGender__c = GENDER,\n\t\tPreferred_Spoken_Language__c = PREF_LANG,\n\t\tOtherStreet__c = OtherStreet,\n\t\tOtherCity__c = HOME_CITY,\n\t\tOtherState__c = HOME_STATE,\n\t\tOtherPostalCode__c = OtherPostalCode,\n\t\tStreet = MailingStreet,\n\t\tCity = MAIL_CITY,\n\t\tSTATECODE = MAIL_STATE,\n\t\tPostalCode = MailingPostalCode,\n\t\tEmail = EMAIL_ID,\n\t\tHome_Phone__c = HOME_PHONE,\n\t\tOther_Phone__c = OTHER_PHONE,\n\t\tPhone = WORK_PHONE,\n\t\tMobilePhone = CELL_PHONE,\n\t\tMBI__c = HICN,\n\t\tPart_A__c = PART_A,\n\t\tPart_B__c = PART_B,\n\t\tKPMember__c = KP_MBR,\n\t\tGroup_Number__c = GROUP_NO,\n\t\tSubgroup_Number__c = SUBGROUP_NO,\n\t\tGroup_Type__c = GROUP_TYPE,\n\t\tConversion_Type__c = CONVERSION_TYPE,\n\t\tMember_Type__c = MEMBER_ROLE,\n\t\tProspect_Type__c = PROSPECT_TYPE,\n\t\tPromo_Id__c = PROMO_ID,\n\t\tMedicare_Permission_to_Mail__c = OK_TO_MAIL,\n\t\tPart_A_EFF_Start_date__c = PART_A_EFF_DT,\n\t\tPart_B_EFF_Start_date__c = PART_B_EFF_DT,\n\t\tMedicare_Permission_to_Call__c = PTC,\n\t\tMedicare_Permission_to_Call_Scope__c = PTC_SCOPE,\n\t\tMedicare_Permission_to_Call_Source__c = PTC_SOURCE,\n\t\tMedicare_Permission_to_Call_Expire_Date__c = PTC_EXPIRY_DT,\n\t\tMedicare_Permission_to_Email__c = PTE,\n\t\tMedicare_Permission_to_Email_Scope__c = PTE_SCOPE,\n\t\tMedicare_Permission_to_Email_Source__c = PTE_SOURCE,\n\t\tMedicare_Permission_to_Email_Expiration__c = PTE_EXPIRY_DT,\n\t\tGroup_Name__c = GROUP_NAME,\n\t\tSubgroup_Name__c = SUBGROUP_NAME,\n\t\tGroupMedicarePlan__c = GROUP_MEDICARE_PLAN,\n\t\tDo_Not_Solicit__c = DO_NOT_SOLICIT,\n\t\tMedicare_Permission_to_IVR__c = OK_TO_IVR,\n\t\tSubscriber_MRN__c = SUBSCRIBER_MRN,\n\t\tSubscriber_Contact_Id__c = SUBSCRIBER_CONTACT_ID,\n\t\tBad_Email__c = BADEMAIL,\n\t\tBest_Time__c = BESTTIME,\n\t\tCMS_ENROLL_SUBMIT_DATE__c = CMS_ENROLL_SUBMIT_DATE,\n\t\tCMS_FILE_DATE__c = CMS_FILE_DATE,\n\t\temployerGroupNum__c = EMPLOYER_GROUP_NUM,\n\t\tEmployer_Group_Type__c = EMPLOYER_GROUP_TYPE,\n\t\tMEDNET_APP_ID__c = MEDNET_APP_ID,\n\t\tMEDNET_APP_SUBMIT_DATE__c = MEDNET_APP_SUBMIT_DATE,\n\t\tDependent_Contact_Id__c = DEPENDENT_CONTACT_ID,\n\t\tDependent_MRN__c = DEPENDENT_MRN,\n\t\tDependent_spouse__c = DEPENDENT_SPOUSE,\n\t\tDeps_has_dual_coverage__c = DEPS_HAS_DUAL_COVERAGE,\n\t\tDeps_is_member__c = DEPS_IS_MEMBER,\n\t\tDeps_other_coverage__c = DEPS_OTHER_COVERAGE,\n\t\tHas_dual_coverage__c = HAS_DUAL_COVERAGE,\n\t\tKpre_id__c = KPRE_ID,\n\t\tmailing_address_change__c = MAILING_ADDRESS_CHANGE,\n\t\tMedicalServiceArea__c = MEDICALSERVICEAREA,\n\t\tMedNameSame__c = MEDNAMESAME,\n\t\tMember__c = MEMBER,\n\t\tname_change__c = NAME_CHANGE,\n\t\tnotInterested__c = NOTINTERESTED,\n\t\tOk_to_Call_Lis__c = OK_TO_CALL_LIS,\n\t\tPbp__c = PBP,\n\t\tPlan_Id__c = PLAN_ID,\n\t\tPlan_Name__c = PLAN_NAME,\n\t\tprimary_address_change__c = PRIMARY_ADDRESS_CHANGE,\n\t\tPrimary_product_of_interest__c = PRIMARY_PRODUCT_OF_INTEREST,\n\t\tSame__c = SAME,\n\t\tTEFRA__c = TEFRA,\n\t\tBC2_CONTACT_ID__c = BC2_CONTACT_ID,\n\t\tCompany,\n\t\tOwnerId = CONTACT_OWNER,\n\t\tCOUNTRYCODE = MAILINGCOUNTRYCODE,\n\t\tOtherCountry__c = OtherCountry\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select1\nDerivedColumn2 select(mapColumn(\n\t\tADFId__c,\n\t\tCustomer_Id__c = CUSTOMER_ID,\n\t\tFirstName = FIRST_NAME,\n\t\tMiddleName = MIDDLE_NAME,\n\t\tLastName = LAST_NAME,\n\t\tMedicare_First_Name__c = MDCR_FIRST_NAME,\n\t\tMedicareMiddleInitial__c = MDCR_MIDDLE_NAME,\n\t\tMedicare_Last_Name__c = MDCR_LAST_NAME,\n\t\tBirthdate = BIRTH_DT,\n\t\tGender__c = GENDER,\n\t\tPreferred_Spoken_Language__c = PREF_LANG,\n\t\tOtherStreet,\n\t\tOtherCity = HOME_CITY,\n\t\tOTHERSTATECODE = HOME_STATE,\n\t\tOtherPostalCode,\n\t\tMailingStreet,\n\t\tMailingCity = MAIL_CITY,\n\t\tMAILINGSTATECODE = MAIL_STATE,\n\t\tMailingPostalCode,\n\t\tEmail = EMAIL_ID,\n\t\tHomePhone = HOME_PHONE,\n\t\tOtherPhone = OTHER_PHONE,\n\t\tPhone = WORK_PHONE,\n\t\tMobilePhone = CELL_PHONE,\n\t\tMBI__c = HICN,\n\t\tPart_A__c = PART_A,\n\t\tPart_B__c = PART_B,\n\t\tKPMember__c = KP_MBR,\n\t\tGroup_Number__c = GROUP_NO,\n\t\tSubgroup_Number__c = SUBGROUP_NO,\n\t\tGroup_Type__c = GROUP_TYPE,\n\t\tConversion_Type__c = CONVERSION_TYPE,\n\t\tMedical_Record_Number__c = MRN,\n\t\tMember_Type__c = MEMBER_ROLE,\n\t\tProspect_Type__c = PROSPECT_TYPE,\n\t\tPromo_Id__c = PROMO_ID,\n\t\tMedicare_Permission_to_Mail__c = OK_TO_MAIL,\n\t\tPart_A_Effective_Date__c = PART_A_EFF_DT,\n\t\tPart_B_Effective_Date__c = PART_B_EFF_DT,\n\t\tMedicare_Permission_to_Call__c = PTC,\n\t\tMedicare_Permission_to_Call_Scope__c = PTC_SCOPE,\n\t\tMedicare_Permission_to_Call_Source__c = PTC_SOURCE,\n\t\tMedicare_Permission_to_Call_Expire_Date__c = PTC_EXPIRY_DT,\n\t\tMedicare_Permission_to_Email__c = PTE,\n\t\tMedicare_Permission_to_Email_Scope__c = PTE_SCOPE,\n\t\tMedicare_Permission_to_Email_Source__c = PTE_SOURCE,\n\t\tMedicare_Permission_to_Email_Expiration__c = PTE_EXPIRY_DT,\n\t\tGroup_Name__c = GROUP_NAME,\n\t\tSubgroup_Name__c = SUBGROUP_NAME,\n\t\tGroupMedicarePlan__c = GROUP_MEDICARE_PLAN,\n\t\tDo_Not_Solicit__c = DO_NOT_SOLICIT,\n\t\tMedicare_Permission_to_IVR__c = OK_TO_IVR,\n\t\tSubscriber_MRN__c = SUBSCRIBER_MRN,\n\t\tSubscriber_Contact_Id__c = SUBSCRIBER_CONTACT_ID,\n\t\tBad_Email__c = BADEMAIL,\n\t\tBest_Time_to_Reach__c = BESTTIME,\n\t\tCMS_ENROLL_SUBMIT_DATE__c = CMS_ENROLL_SUBMIT_DATE,\n\t\tCMS_FILE_DATE__c = CMS_FILE_DATE,\n\t\temployerGroupNum__c = EMPLOYER_GROUP_NUM,\n\t\tEmployer_Group_Type__c = EMPLOYER_GROUP_TYPE,\n\t\tMEDNET_APP_ID__c = MEDNET_APP_ID,\n\t\tMEDNET_APP_SUBMIT_DATE__c = MEDNET_APP_SUBMIT_DATE,\n\t\tDependent_Contact_Id__c = DEPENDENT_CONTACT_ID,\n\t\tDependent_MRN__c = DEPENDENT_MRN,\n\t\tDependent_spouse__c = DEPENDENT_SPOUSE,\n\t\tDeps_has_dual_coverage__c = DEPS_HAS_DUAL_COVERAGE,\n\t\tDeps_is_member__c = DEPS_IS_MEMBER,\n\t\tDeps_other_coverage__c = DEPS_OTHER_COVERAGE,\n\t\tHas_dual_coverage__c = HAS_DUAL_COVERAGE,\n\t\tKpre_id__c = KPRE_ID,\n\t\tmailing_address_change__c = MAILING_ADDRESS_CHANGE,\n\t\tMedical_Service_Area__c = MEDICALSERVICEAREA,\n\t\tMedNameSame__c = MEDNAMESAME,\n\t\tMember__c = MEMBER,\n\t\tname_change__c = NAME_CHANGE,\n\t\tnotInterested__c = NOTINTERESTED,\n\t\tOk_to_Call_Lis__c = OK_TO_CALL_LIS,\n\t\tPbp__c = PBP,\n\t\tPlan_Id__c = PLAN_ID,\n\t\tPlan_Name__c = PLAN_NAME,\n\t\tprimary_address_change__c = PRIMARY_ADDRESS_CHANGE,\n\t\tPrimary_product_of_interest__c = PRIMARY_PRODUCT_OF_INTEREST,\n\t\tSame__c = SAME,\n\t\tTEFRA__c = TEFRA,\n\t\tBC2_CONTACT_ID__c = BC2_CONTACT_ID,\n\t\tOpportunity_Create__c = OPPORTUNITY_CREATE,\n\t\tbC_aid__c = CONTACT_OWNER,\n\t\tOwnerId = CONTACT_OWNER,\n\t\tRecordTypeId,\n\t\tIs_Medicare__c = ISMEDICARE,\n\t\tMAILINGCOUNTRYCODE,\n\t\tOTHERCOUNTRYCODE,\n\t\tCreation_Role__c = ROLE,\n\t\tCoverage_Address_County__c = HOME_COUNTY,\n\t\tCounty__c = MAILING_COUNTY,\n\t\tOtherCountry,\n\t\tMedicare_Permission_to_Text_New__c = PTT,\n\t\tMedicare_Permission_to_Text_Scope__c = PTT_SCOPE,\n\t\tMedicare_Permission_to_Text_Source__c = PTT_SOURCE,\n\t\tMedicare_Permission_to_Text_Expire_Date__c = PTT_DATE,\n\t\tDigital_ID__c = DIGITAL_ID,\n\t\tSpecial_Cohort__c = SPECIAL_COHORT,\n\t\tMedical_Record_Number_Prefix__c = MRN_PREFIX\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select2\nDerivedColumn split((isNull(MRN) && (isNull(PART_A) || isNull(PART_B))),\n\tdisjoint: false) ~> ConditionalSplit1@(leads, contacts)\nConditionalSplit2@toSFDC derive(OtherStreet = concatWS(' ',HOME_ADDR1,HOME_ADDR2),\n\t\tOtherPostalCode = concatWS('-',toString(HOME_ZIP),toString(HOME_ZIP4)),\n\t\tMailingStreet = concatWS(' ',MAIL_ADDR1,MAIL_ADDR2),\n\t\tMailingPostalCode = concatWS('-',toString(MAIL_ZIP),toString(MAIL_ZIP4)),\n\t\tPTC_DATE = coalesce(toString(toDate(PTC_DATE, 'MM/dd/yyyy')),PTC_DATE),\n\t\tPTC_EXPIRY_DT = coalesce(toString(toDate(PTC_EXPIRY_DT, 'MM/dd/yyyy')),PTC_EXPIRY_DT),\n\t\tOPPORTUNITY_CREATE = case(isNull(OPPORTUNITY_CREATE),'false',coalesce(toString(toBoolean(OPPORTUNITY_CREATE)),OPPORTUNITY_CREATE)),\n\t\tDO_NOT_SOLICIT = case(isNull(DO_NOT_SOLICIT),'false',coalesce(toString(toBoolean(DO_NOT_SOLICIT)),DO_NOT_SOLICIT)),\n\t\tNOTINTERESTED = case(isNull(NOTINTERESTED),'false',coalesce(toString(toBoolean(NOTINTERESTED)),NOTINTERESTED)),\n\t\tISMEDICARE = case(isNull(ISMEDICARE),'false',coalesce(toString(toBoolean(ISMEDICARE)),ISMEDICARE)),\n\t\tGENDER = case(upper(GENDER) == 'F', 'Female', upper(GENDER) == 'M', 'Male',  upper(GENDER) == 'U', 'Undeclared', GENDER),\n\t\tPREF_LANG = case(lower(PREF_LANG) == 'eng', 'English', lower(PREF_LANG) == 'spa', 'Spanish', PREF_LANG),\n\t\tPART_A_EFF_DT = coalesce(toString(toDate(PART_A_EFF_DT, 'yyyyMMdd')),PART_A_EFF_DT),\n\t\tPART_B_EFF_DT = coalesce(toString(toDate(PART_B_EFF_DT, 'yyyyMMdd')),PART_B_EFF_DT),\n\t\tPTE_DATE = coalesce(toString(toDate(PTE_DATE, 'MM/dd/yyyy')),PTE_DATE),\n\t\tPTE_EXPIRY_DT = coalesce(toString(toDate(PTE_EXPIRY_DT, 'MM/dd/yyyy')),PTE_EXPIRY_DT),\n\t\tCONTACT_OWNER = '0053h000001DkXxAAK',\n\t\tMAILINGCOUNTRYCODE = 'US',\n\t\tOTHERCOUNTRYCODE = 'US',\n\t\tCMS_ENROLL_SUBMIT_DATE = coalesce(toString(toDate(CMS_ENROLL_SUBMIT_DATE, 'MM/dd/yyyy')),CMS_ENROLL_SUBMIT_DATE),\n\t\tCMS_FILE_DATE = coalesce(toString(toDate(CMS_FILE_DATE, 'MM/dd/yyyy')),CMS_FILE_DATE),\n\t\tMEDNET_APP_SUBMIT_DATE = coalesce(toString(toTimestamp(MEDNET_APP_SUBMIT_DATE, 'MM/dd/yyyy HH:mm')),MEDNET_APP_SUBMIT_DATE),\n\t\tBIRTH_DT = coalesce(toString(toTimestamp(BIRTH_DT, 'yyyyMMdd')),BIRTH_DT),\n\t\tBADEMAIL = case(isNull(BADEMAIL),'false',coalesce(toString(toBoolean(BADEMAIL)),BADEMAIL)),\n\t\tMAILING_ADDRESS_CHANGE = case(isNull(MAILING_ADDRESS_CHANGE),'false',coalesce(toString(toBoolean(MAILING_ADDRESS_CHANGE)),MAILING_ADDRESS_CHANGE)),\n\t\tNAME_CHANGE = case(isNull(NAME_CHANGE),'false',coalesce(toString(toBoolean(NAME_CHANGE)),NAME_CHANGE)),\n\t\tOK_TO_MAIL = iif(upper(OK_TO_MAIL)=='Y','yes', iif(upper(OK_TO_MAIL)=='N','no', OK_TO_MAIL)),\n\t\tOtherCountry = 'United States',\n\t\tOK_TO_EMAIL_FOR_SEMINARS = case(isNull(OK_TO_EMAIL_FOR_SEMINARS),'false',coalesce(toString(toBoolean(OK_TO_EMAIL_FOR_SEMINARS)),OK_TO_EMAIL_FOR_SEMINARS))) ~> DerivedColumn\nConditionalSplit1@leads derive(Company = concat(LAST_NAME, ' HOUSEHOLD'),\n\t\tMAILING_ADDRESS_CHANGE = coalesce(toString(toBoolean(MAILING_ADDRESS_CHANGE)),(MAILING_ADDRESS_CHANGE)),\n\t\tNAME_CHANGE = coalesce(toString(toBoolean(NAME_CHANGE)),(NAME_CHANGE))) ~> DerivedColumn1\nConditionalSplit1@leads select(mapColumn(\n\t\tADFId__c,\n\t\tNotes__c = NOTES\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select3\nConditionalSplit1@contacts select(mapColumn(\n\t\tADFId__c,\n\t\tNotes__c = NOTES\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Select4\nConditionalSplit1@contacts derive(RecordTypeId = '0123h000000t1WJAAY',\n\t\tCALL_REASON = case( isNull(CALL_REASON),'KPWA Lead Load', CALL_REASON),\n\t\tMEMBER_ROLE = iif(isInteger(SUBSCRIBER_MRN),'Dependent',MEMBER_ROLE)) ~> DerivedColumn2\nSelect1, RecordTypeId join(1 == 1,\n\tjoinType:'left',\n\tmatchType:'exact',\n\tignoreSpaces: false,\n\tbroadcast: 'right')~> AddRecordTypeId\ninbound derive(ADFId__c = uuid()) ~> DerivedColumn3\nDerivedColumn3 split(isNull(FIRST_NAME)||isNull(LAST_NAME)||isNull(KP_MBR)||isNull(CONTACT_OWNER)||isNull(PROMO_ID)||((upper(OPPORTUNITY_CREATE)=='Y')&&isNull(ROLE))||(isNull(SUBSCRIBER_MRN)==false()&&isInteger(SUBSCRIBER_MRN)==false())|| isNull(PTT)==false()&&(lower(PTT)!='yes'&&lower(PTT)!='no')||lower(PTT)=='yes'&&(isNull(PTT_SCOPE)||isNull(PTT_SOURCE)),\n\tdisjoint: false) ~> ConditionalSplit2@(toReject, toSFDC)\nConditionalSplit2@toReject derive(REJECT_REASON = concat('ADF:Required Field Contains NULL Or Invalid Value: ', iif(isNull(FIRST_NAME), 'FIRST_NAME ', ''), iif(isNull(LAST_NAME), 'LAST_NAME ', ''), iif(isNull(KP_MBR), 'KP_MBR ', ''), iif(isNull(CONTACT_OWNER), 'CONTACT_OWNER ', ''), iif(isNull(PROMO_ID), 'PROMO_ID ', ''),iif(isNull(ROLE)&&{OPPORTUNITY_CREATE}=='Y', 'ROLE is NULL with OPP = Y ', ''),iif((isNull(SUBSCRIBER_MRN)==false()&&isInteger(SUBSCRIBER_MRN)==false()), 'SUBSCRIBER_MRN is not integer', ''),iif(lower(PTT)=='yes'&&(isNull(PTT_SCOPE)||isNull(PTT_SOURCE)),'No PTT_SOURCE or PTT_SCOPE when PTT = yes',''),iif(isNull(PTT)==false()&&(lower(PTT)!='yes'&&lower(PTT)!='no'),'PTT MUST be null/yes/no',''))) ~> rejectReason\nrejectReason select(mapColumn(\n\t\tADFId__c,\n\t\tREJECT_REASON\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select5\nAddRecordTypeId sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:[('ib_kpma_new_contact_Lead.csv')],\n\tpartitionBy('hash', 1)) ~> insertLead\nSelect2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_new_contact_Contact.csv'],\n\tpartitionBy('hash', 1)) ~> insertContact\nSelect3 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['new_contact_Lead_Notes.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> notesLead\nSelect4 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['new_contact_Contact_Notes.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tADFId__c,\n\t\tNotes__c\n\t),\n\tpartitionBy('hash', 1)) ~> notesContact\nDerivedColumn3 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_new_contact_raw.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> CuratedInbound\nSelect5 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['ib_kpma_new_contact_source_reject.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> Reject"
+		}
+	}
+}
